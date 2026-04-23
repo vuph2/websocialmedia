@@ -1,0 +1,737 @@
+@model web.Models.FeedPageViewModel
+@{
+    ViewData["Title"] = "Nexus – Feed";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<p hidden id="nexus-view-marker">HOME_INDEX</p>
+
+<div class="feed-content">
+    <!-- Upload Preview Modal -->
+    <div id="storyPreviewModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:10000; flex-direction:column; align-items:center; justify-content:center;">
+        <div style="background:var(--card); padding:20px; border-radius:24px; max-width:400px; text-align:center;">
+            <h4 style="color:#fff; margin-bottom:15px; font-weight:800; font-family:'Syne';">Góc Nhìn Trước</h4>
+            <div id="storyPreviewContent" style="margin-bottom:15px; background:#000; border-radius:12px; overflow:hidden; max-height:400px; display:flex; align-items:center; justify-content:center;"></div>
+            <p style="color:var(--text-muted); font-size:0.8rem; margin-bottom:20px;"><i class="bi bi-info-circle me-1"></i>Video tối đa 30s và nhỏ hơn 100MB</p>
+            <div style="display:flex; gap:10px;">
+                <button onclick="cancelStoryUpload()" class="btn" style="flex:1; background:rgba(255,255,255,0.1); color:#fff; border-radius:12px; font-weight:700;">Hủy</button>
+                <button onclick="confirmStoryUpload()" class="btn" style="flex:1; background:var(--brand); color:#fff; border-radius:12px; font-weight:700;">Đăng lên Story</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Facebook-Style Story Viewer Modal -->
+    <div id="storyViewer" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:9999; flex-direction:column; align-items:center; justify-content:center;">
+        
+        <!-- Background Blur (Optionally) -->
+        <div id="storyViewerBg" style="position:absolute; top:0; left:0; width:100%; height:100%; background:#000; z-index:-1; filter:blur(50px); opacity:0.3; background-size:cover; background-position:center;"></div>
+
+        <!-- Progress Bars (Top) -->
+        <div id="storyProgressContainer" style="display:flex; gap:5px; padding:15px; position:absolute; top:0; left:0; right:0; z-index:210; max-width:500px; margin:0 auto;">
+            <!-- bars injected dynamically -->
+        </div>
+
+        <!-- Header: User Info -->
+        <div style="display:flex; align-items:center; padding:35px 25px 20px; position:absolute; top:0; left:0; right:0; z-index:200; background:linear-gradient(to bottom, rgba(0,0,0,0.6), transparent); max-width:500px; margin:0 auto;">
+            <div id="storyViewerAvatar" style="width:40px; height:40px; border-radius:50%; margin-right:12px; border:2px solid var(--brand); overflow:hidden; display:flex; align-items:center; justify-content:center; background:var(--surface);"></div>
+            <div style="color:#fff; flex:1;">
+                <div id="storyViewerName" style="font-weight:700; font-size:1rem; text-shadow:0 1px 3px rgba(0,0,0,0.8);"></div>
+                <div id="storyViewerTime" style="font-size:0.8rem; color:rgba(255,255,255,0.8); text-shadow:0 1px 3px rgba(0,0,0,0.8);"></div>
+            </div>
+            <button onclick="closeStoryViewer()" style="background:rgba(255,255,255,0.15); border:none; color:#fff; font-size:1.1rem; width:40px; height:40px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; transition: all 0.2s; margin-left:10px;"><i class="bi bi-x-lg"></i></button>
+        </div>
+
+        <!-- Fixed Frame Media Container (9:16) -->
+        <div id="storyViewerContentFrame" style="position:relative; width:100%; max-width:450px; height:100%; max-height:800px; background:#111; overflow:hidden; display:flex; align-items:center; justify-content:center; box-shadow:0 0 50px rgba(0,0,0,0.5);">
+            <div id="storyViewerMedia" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; position:relative;">
+                <!-- media injected here -->
+            </div>
+            
+            <!-- Navigation Overlays -->
+            <div onclick="prevStory(event)" style="position:absolute; top:0; bottom:0; left:0; width:30%; cursor:pointer; z-index:110;"></div>
+            <div onclick="nextStory(event)" style="position:absolute; top:0; bottom:0; right:0; width:30%; cursor:pointer; z-index:110;"></div>
+        </div>
+
+        <!-- Reaction Footer (For Friends) -->
+        <div id="storyReactionFooter" style="padding:20px; position:absolute; bottom:0; left:0; right:0; z-index:120; background:linear-gradient(to top, rgba(0,0,0,0.8), transparent); display:none; justify-content:center; max-width:500px; margin:0 auto;">
+            <div class="reaction-bar glass-effect" style="display:flex; gap:12px; background:rgba(0,0,0,0.6); padding:12px 25px; border-radius:40px; border:1px solid rgba(255,255,255,0.1); backdrop-filter:blur(10px);">
+                <button onclick="reactStory('like')" style="background:none; border:none; font-size:1.6rem; cursor:pointer;" title="Like">👍</button>
+                <button onclick="reactStory('love')" style="background:none; border:none; font-size:1.6rem; cursor:pointer;" title="Love">❤️</button>
+                <button onclick="reactStory('haha')" style="background:none; border:none; font-size:1.6rem; cursor:pointer;" title="Haha">😂</button>
+                <button onclick="reactStory('wow')" style="background:none; border:none; font-size:1.6rem; cursor:pointer;" title="Wow">😮</button>
+                <button onclick="reactStory('sad')" style="background:none; border:none; font-size:1.6rem; cursor:pointer;" title="Sad">😢</button>
+                <button onclick="reactStory('angry')" style="background:none; border:none; font-size:1.6rem; cursor:pointer;" title="Angry">😡</button>
+            </div>
+        </div>
+
+        <!-- Own Story Stats Footer -->
+        <div id="storyStatsFooter" style="padding:15px 25px; position:absolute; bottom:0; left:0; right:0; z-index:120; background:rgba(0,0,0,0.8); display:none; align-items:center; border-top:1px solid rgba(255,255,255,0.1); max-width:500px; margin:0 auto; gap: 10px;">
+            <div style="flex:1;">
+                <button onclick="toggleViewerList()" style="background:none; border:none; color:#fff; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                    <i class="bi bi-eye"></i> <span id="storyViewerCount">0</span> người xem
+                </button>
+            </div>
+            <div id="storyReactionSummary" style="display:flex; gap:5px;"></div>
+            <div style="display:flex; gap:10px;">
+                <button onclick="deleteAllMyStories()" class="btn btn-sm" style="background:rgba(239, 68, 68, 0.1); color:#fca5a5; border:1px solid rgba(239, 68, 68, 0.2); border-radius:8px; font-size:0.75rem; font-weight:600; padding:4px 8px;">Xóa tất cả</button>
+                <button onclick="deleteCurrentStory()" class="btn btn-sm" style="background:var(--brand); color:#fff; border-radius:8px; font-size:0.75rem; font-weight:700; padding:4px 12px;"><i class="bi bi-trash-fill me-1"></i>Xóa</button>
+            </div>
+        </div>
+
+        <!-- Viewer List Popup (Modal) -->
+        <div id="storyViewerListModal" style="display:none; position:absolute; bottom:0; left:0; right:0; background:var(--card); z-index:150; height:60%; border-radius:24px 24px 0 0; flex-direction:column; padding:20px; box-shadow:0 -10px 30px rgba(0,0,0,0.5);">
+            <div style="display:flex; align-items:center; margin-bottom:20px;">
+                <h5 style="color:#fff; margin:0; font-family:'Syne';">Chi tiết lượt xem</h5>
+                <button onclick="toggleViewerList()" style="margin-left:auto; background:none; border:none; color:var(--text-muted); cursor:pointer; padding: 5px;"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div id="storyViewerItems" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:12px;">
+                <!-- items injected -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Stories Carousel -->
+    <div class="stories-container glass-effect" style="display:flex; gap:12px; overflow-x:auto; padding:15px; margin-bottom:1.5rem; border-radius:24px;">
+        <!-- Add Story Button -->
+        <div class="story-card" style="min-width:110px; height:180px; background:rgba(255,255,255,0.05); border:1px dashed var(--border); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; transition: transform 0.2s;" onclick="document.getElementById('storyInput').click()" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <div style="width:40px; height:40px; border-radius:50%; background:var(--brand); display:flex; align-items:center; justify-content:center; margin-bottom:8px;">
+                <i class="bi bi-plus-lg" style="font-size:1.2rem; color:#000;"></i>
+            </div>
+            <span style="font-size:0.85rem; font-weight:700; color:#fff;">Add Story</span>
+        </div>
+        <form asp-action="CreateStory" asp-controller="Home" method="post" enctype="multipart/form-data" id="storyForm" style="display:none;">
+            <input type="file" id="storyInput" name="mediaFile" accept="image/*,video/*" onchange="previewStory()" />
+        </form>
+
+        @if(Model.UserStories != null) {
+            var idx = 0;
+            foreach(var userStory in Model.UserStories) {
+                if(userStory.Stories.Any()) {
+                    var firstStory = userStory.Stories.First();
+                    <div class="story-card" style="min-width:110px; height:180px; border-radius:18px; position:relative; overflow:hidden; cursor:pointer; border: 2px solid var(--brand); transition: transform 0.2s; background:#111;" onclick="openStoryViewer(@idx)" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                        @if (firstStory.MediaType == "video") {
+                            <video src="@firstStory.MediaUrl" style="width:100%; height:100%; object-fit:cover; pointer-events:none;" muted loop onmouseover="this.play()" onmouseout="this.pause()"></video>
+                            <div style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.5); border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:0.7rem;"><i class="bi bi-play-fill"></i></div>
+                        } else {
+                            <div style="width:100%; height:100%; background:url('@firstStory.MediaUrl') no-repeat center center/cover;"></div>
+                        }
+                        <div style="position:absolute; top:0; left:0; right:0; bottom:0; background:linear-gradient(to bottom, rgba(0,0,0,0) 50%, rgba(0,0,0,0.8));"></div>
+                        <div style="position:absolute; top:8px; left:8px;">
+                            @if (!string.IsNullOrEmpty(userStory.AuthorAvatar)) {
+                                <img src="@userStory.AuthorAvatar" style="width:32px; height:32px; border-radius:50%; border:2px solid var(--brand); object-fit:cover;" />
+                            } else {
+                                <div style="width:32px; height:32px; border-radius:50%; border:2px solid var(--brand); background:var(--surface); display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:bold; color:var(--brand);">@userStory.AuthorName[0]</div>
+                            }
+                        </div>
+                        <div style="position:absolute; bottom:10px; left:10px; right:10px; color:#fff; font-size:0.8rem; font-weight:bold; text-shadow:0px 1px 3px rgba(0,0,0,0.8); line-height:1.2;">
+                            @userStory.AuthorName
+                        </div>
+                    </div>
+                    idx++;
+                }
+            }
+        }
+    </div>
+
+    <!-- Create post bar -->
+    <div class="create-bar glass-effect" style="padding:1.5rem; margin-bottom:2rem;">
+        <div class="create-input-row" style="display:flex; align-items:center; gap:1rem; margin-bottom:1rem;">
+            <div class="post-avatar" style="width:42px;height:42px;font-size:1.1rem;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);border-radius:12px;border:1px solid var(--border);color:var(--brand);font-weight:800;">
+                <i class="bi bi-person"></i>
+            </div>
+            <a href="@Url.Action("CreatePost","Home")" class="create-input" style="flex:1;height:46px;background:rgba(36,36,36,0.4);border:1px solid var(--border);border-radius:16px;padding:0 1.2rem;color:#fff;font-size:0.95rem;cursor:pointer;display:flex;align-items:center;text-decoration:none;">
+                What's on your mind?
+            </a>
+        </div>
+        <div class="create-actions" style="display:flex; gap:0.8rem; padding-top:1rem; border-top:1px solid var(--border);">
+            <a href="@Url.Action("CreatePost","Home")?type=media" class="create-action-btn" style="text-decoration:none; color:var(--text-muted); font-size:0.85rem; font-weight:600;"><i class="bi bi-image" style="color:#4ade80;"></i> Photo</a>
+            <a href="@Url.Action("CreatePost","Home")?type=feeling" class="create-action-btn" style="text-decoration:none; color:var(--text-muted); font-size:0.85rem; font-weight:600;"><i class="bi bi-emoji-smile" style="color:#fbbf24;"></i> Feeling</a>
+            <a href="@Url.Action("CreatePost","Home")?type=poll" class="create-action-btn" style="text-decoration:none; color:var(--text-muted); font-size:0.85rem; font-weight:600;"><i class="bi bi-bar-chart-line" style="color:#a78bfa;"></i> Poll</a>
+        </div>
+    </div>
+
+    @if (TempData["CreatePostSuccess"] != null)
+    {
+        <div class="glass-effect mb-4" style="background:rgba(74,222,128,0.1); border-color:rgba(74,222,128,0.2); color:#86efac; padding:1rem; font-size:.9rem; border-radius:16px;">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["CreatePostSuccess"]
+        </div>
+    }
+    @if (TempData["FeedError"] != null)
+    {
+        <div class="glass-effect mb-4" style="background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.2); color:#fca5a5; padding:1rem; font-size:.9rem; border-radius:16px;">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["FeedError"]
+        </div>
+    }
+
+    <div id="posts-wrapper">
+        @if (Model?.Posts == null || !Model.Posts.Any())
+        {
+            <div class="empty-state glass-effect" style="text-align:center; padding:5rem 2rem; color:var(--text-muted); border-radius:16px;">
+                <i class="bi bi-newspaper" style="font-size:3.5rem; margin-bottom:1.5rem; display:block; opacity: 0.5;"></i>
+                <p class="mb-4">No posts yet — be the first!</p>
+                <a href="@Url.Action("CreatePost","Home")" class="btn px-4 py-2" style="background:var(--brand); color:#fff; text-decoration:none; border-radius:12px; font-weight:700;">Create Post</a>
+            </div>
+        }
+        else
+        {
+            @await Html.PartialAsync("_PostList", Model.Posts)
+        }
+    </div>
+    <div id="feed-loader" style="text-align:center; padding:3rem; display:none;"><div class="spinner" style="width:32px; height:32px; border:3px solid rgba(255,255,255,0.1); border-top-color:var(--brand); border-radius:50%; animation:spin 0.8s linear infinite;"></div></div>
+</div>
+
+@section RightSidebar {
+    <aside class="right-sidebar">
+        <div class="widget glass-effect" style="padding:1.5rem; margin-bottom:2rem; border-radius:24px;">
+            <div style="font-family:'Syne'; font-weight:800; font-size:1.1rem; margin-bottom:1.5rem; color:#fff;">Trending</div>
+            <div style="padding:0.8rem 0; border-bottom:1px dashed var(--border);">
+                <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:1px;">Technology</div>
+                <div style="font-size:1rem; font-weight:700; color:#fff;">#AI</div>
+                <div style="font-size:0.8rem; color:var(--text-muted);">12.4K posts</div>
+            </div>
+            <div style="padding:0.8rem 0;">
+                <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:1px;">Design</div>
+                <div style="font-size:1rem; font-weight:700; color:#fff;">#Glassmorphism</div>
+                <div style="font-size:0.8rem; color:var(--text-muted);">5.1K posts</div>
+            </div>
+        </div>
+
+        <div class="widget glass-effect" style="padding:1.5rem; border-radius:24px;">
+            <div style="font-family:'Syne'; font-weight:800; font-size:1.1rem; margin-bottom:1.5rem; color:#fff;">Who to follow</div>
+            @if (Model.SuggestedUsers.Any())
+            {
+                @foreach (var u in Model.SuggestedUsers)
+                {
+                    <div style="display:flex; align-items:center; gap:1rem; padding:0.8rem 0;">
+                        <a href="@Url.Action("Profile","Home", new { id = u.Id })" style="text-decoration:none;">
+                            @if (!string.IsNullOrEmpty(u.Avatar))
+                            {
+                                <img src="@u.Avatar" style="width:42px; height:42px; border-radius:12px; object-fit:cover; border:1px solid var(--border);" alt=""/>
+                            }
+                            else
+                            {
+                                <div style="width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); font-weight:700; color:var(--brand); border:1px solid var(--border);">@u.Name[0]</div>
+                            }
+                        </a>
+                        <div style="flex-grow:1;">
+                            <a href="@Url.Action("Profile","Home", new { id = u.Id })" style="text-decoration:none; display:block;">
+                                <div style="font-weight:700; color:#fff; font-size:0.95rem;">@u.Name</div>
+                                <div style="font-size:0.8rem; color:var(--text-muted);">@(u.Bio ?? "Active User")</div>
+                            </a>
+                        </div>
+                        <button class="btn-follow @(u.IsFollowed ? "unfollow" : "")" 
+                                onclick="toggleFollow('@u.Id', this)"
+                                style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:#fff; font-size:0.8rem; font-weight:700; padding:0.4rem 1rem; border-radius:10px; cursor:pointer; transition:var(--transition);">
+                            @(u.IsFollowed ? "Unfollow" : "Follow")
+                        </button>
+                    </div>
+                }
+            }
+        </div>
+    </aside>
+}
+
+@section Scripts {
+    <script>
+        let page = 1;
+        let loading = false;
+        let hasMore = true;
+
+        // ── Story Upload Preview ──
+        let uploadedFile = null;
+        function previewStory() {
+            const file = document.getElementById('storyInput').files[0];
+            if (!file) return;
+
+            if (file.size > 100 * 1024 * 1024) {
+                showToast("Alert", "File size cannot exceed 100MB.", "warning");
+                document.getElementById('storyInput').value = '';
+                return;
+            }
+
+            const previewContent = document.getElementById('storyPreviewContent');
+            const fileUrl = URL.createObjectURL(file);
+
+            if (file.type.startsWith('video/')) {
+                const video = document.createElement('video');
+                video.preload = 'metadata';
+                video.onloadedmetadata = function() {
+                    if (video.duration > 30) {
+                        alert("Video length cannot exceed 30 seconds.");
+                        document.getElementById('storyInput').value = '';
+                        URL.revokeObjectURL(fileUrl);
+                    } else {
+                        previewContent.innerHTML = `<video src="${fileUrl}" autoplay loop muted style="max-width:100%; max-height:400px; object-fit:contain;"></video>`;
+                        document.getElementById('storyPreviewModal').style.display = 'flex';
+                        uploadedFile = file;
+                    }
+                }
+                video.src = fileUrl;
+            } else {
+                previewContent.innerHTML = `<img src="${fileUrl}" style="max-width:100%; max-height:400px; object-fit:contain;" />`;
+                document.getElementById('storyPreviewModal').style.display = 'flex';
+                uploadedFile = file;
+            }
+        }
+
+        function cancelStoryUpload() {
+            document.getElementById('storyInput').value = '';
+            document.getElementById('storyPreviewModal').style.display = 'none';
+            document.getElementById('storyPreviewContent').innerHTML = '';
+        }
+
+        function confirmStoryUpload() {
+            document.getElementById('storyPreviewModal').style.display = 'none';
+            document.getElementById('storyForm').submit();
+        }
+
+        // ── Story Viewer Logic ──
+        const userStoriesData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.UserStories, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+        let activeUserIdx = -1;
+        let activeStoryIdx = -1;
+        let storyTimeout;
+        const STORY_DURATION = 5000; // 5 seconds image
+
+        function openStoryViewer(userIdx) {
+            activeUserIdx = userIdx;
+            activeStoryIdx = 0;
+            document.getElementById('storyViewer').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            renderStory();
+        }
+
+        function closeStoryViewer() {
+            document.getElementById('storyViewer').style.display = 'none';
+            document.getElementById('storyViewerListModal').style.display = 'none';
+            document.body.style.overflow = '';
+            clearTimeout(storyTimeout);
+            const mediaContainer = document.getElementById('storyViewerMedia');
+            const video = mediaContainer.querySelector('video');
+            if (video) video.pause();
+        }
+
+        async function recordView(storyId) {
+            await fetch('/Home/RecordStoryView', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `storyId=${storyId}&__RequestVerificationToken=${getToken()}`
+            });
+        }
+
+        function renderStory() {
+            clearTimeout(storyTimeout);
+            document.getElementById('storyViewerListModal').style.display = 'none';
+
+            if (activeUserIdx < 0 || activeUserIdx >= userStoriesData.length) {
+                closeStoryViewer();
+                return;
+            }
+            
+            const userGroup = userStoriesData[activeUserIdx];
+            if (activeStoryIdx < 0) {
+                activeUserIdx--;
+                if(activeUserIdx < 0) { closeStoryViewer(); return; }
+                activeStoryIdx = userStoriesData[activeUserIdx].stories.length - 1;
+                renderStory(); return;
+            }
+            if (activeStoryIdx >= userGroup.stories.length) {
+                activeUserIdx++;
+                if(activeUserIdx >= userStoriesData.length) { closeStoryViewer(); return; }
+                activeStoryIdx = 0;
+                renderStory(); return;
+            }
+
+            const story = userGroup.stories[activeStoryIdx];
+
+            // Render Header
+            document.getElementById('storyViewerName').innerText = userGroup.authorName;
+            
+            const dp = new Date(story.createdAt);
+            document.getElementById('storyViewerTime').innerText = dp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            const avi = document.getElementById('storyViewerAvatar');
+            if(userGroup.authorAvatar) {
+                avi.innerHTML = `<img src="${userGroup.authorAvatar}" style="width:100%; height:100%; object-fit:cover;" />`;
+            } else {
+                avi.innerHTML = `<span style="font-weight:bold; color:var(--brand);">${userGroup.authorName[0]}</span>`;
+            }
+
+            // Stats vs Reactions
+            if (story.isOwn) {
+                document.getElementById('storyReactionFooter').style.display = 'none';
+                document.getElementById('storyStatsFooter').style.display = 'flex';
+                document.getElementById('storyViewerCount').innerText = story.viewCount || 0;
+                
+                // Summarize stickers
+                const reactionsDiv = document.getElementById('storyReactionSummary');
+                reactionsDiv.innerHTML = '';
+                const types = [...new Set(story.reactions.map(r => r.reactionType))].slice(0, 3);
+                const emojiMap = { like:'👍', love:'❤️', haha:'😂', wow:'😮', sad:'😢', angry:'😡' };
+                types.forEach(t => {
+                    const s = document.createElement('span');
+                    s.innerText = emojiMap[t] || '👍';
+                    reactionsDiv.appendChild(s);
+                });
+            } else {
+                document.getElementById('storyReactionFooter').style.display = 'flex';
+                document.getElementById('storyStatsFooter').style.display = 'none';
+                recordView(story.id); // Record view if not own
+            }
+
+            // Background Blur
+            document.getElementById('storyViewerBg').style.backgroundImage = `url('${story.mediaUrl}')`;
+
+            // Progress Bars
+            const progressContainer = document.getElementById('storyProgressContainer');
+            progressContainer.innerHTML = '';
+            for(let i=0; i<userGroup.stories.length; i++) {
+                const bg = document.createElement('div');
+                bg.style.flex = "1";
+                bg.style.height = "3px";
+                bg.style.background = "rgba(255,255,255,0.3)";
+                bg.style.borderRadius = "2px";
+                bg.style.overflow = "hidden";
+                
+                const fill = document.createElement('div');
+                fill.id = `story-progress-${i}`;
+                fill.style.height = "100%";
+                fill.style.width = i < activeStoryIdx ? "100%" : "0%";
+                fill.style.background = "#fff";
+                if(i === activeStoryIdx) {
+                    fill.style.transition = `width linear`;
+                }
+                bg.appendChild(fill);
+                progressContainer.appendChild(bg);
+            }
+
+            // Render Media
+            const mediaContainer = document.getElementById('storyViewerMedia');
+            mediaContainer.innerHTML = ''; // Full clear
+
+            if (story.mediaType === 'video') {
+                const video = document.createElement('video');
+                video.src = story.mediaUrl;
+                video.autoplay = true;
+                video.muted = false; // Facebook auto-plays with sound if user interacted
+                video.style.width = "100%";
+                video.style.height = "100%";
+                video.style.objectFit = "contain";
+                
+                video.onloadedmetadata = function() {
+                    const duration = video.duration * 1000;
+                    startProgress(duration);
+                    storyTimeout = setTimeout(nextStory, duration);
+                };
+                mediaContainer.appendChild(video);
+            } else {
+                const img = document.createElement('img');
+                img.src = story.mediaUrl;
+                img.style.width = "100%";
+                img.style.height = "100%";
+                img.style.objectFit = "contain";
+                mediaContainer.appendChild(img);
+                
+                startProgress(STORY_DURATION);
+                storyTimeout = setTimeout(nextStory, STORY_DURATION);
+            }
+        }
+
+        function toggleViewerList() {
+            const modal = document.getElementById('storyViewerListModal');
+            if (modal.style.display === 'flex') {
+                modal.style.display = 'none';
+            } else {
+                const story = userStoriesData[activeUserIdx].stories[activeStoryIdx];
+                const itemsDiv = document.getElementById('storyViewerItems');
+                itemsDiv.innerHTML = '';
+
+                // Combine viewers and reactions
+                const allStats = [...story.viewers];
+                story.reactions.forEach(r => {
+                    const v = allStats.find(x => x.userId === r.userId);
+                    if (v) v.reactionType = r.reactionType;
+                    else allStats.push(r);
+                });
+
+                if (allStats.length === 0) {
+                    itemsDiv.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:20px;">Chưa có lượt xem nào</div>';
+                }
+
+                const emojiMap = { like:'👍', love:'❤️', haha:'😂', wow:'😮', sad:'😢', angry:'😡' };
+                allStats.forEach(s => {
+                    const div = document.createElement('div');
+                    div.style.cssText = "display:flex; align-items:center; gap:12px; padding:8px;";
+                    div.innerHTML = `
+                        <div style="width:44px; height:44px; border-radius:50%; overflow:hidden; background:var(--surface);">
+                            ${s.userAvatar ? `<img src="${s.userAvatar}" style="width:100%; height:100%; object-fit:cover;" />` : `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:var(--brand); font-weight:700;">${s.userName[0]}</div>`}
+                        </div>
+                        <div style="flex:1;">
+                            <div style="color:#fff; font-weight:600; font-size:0.9rem;">${s.userName}</div>
+                        </div>
+                        ${s.reactionType ? `<div style="font-size:1.2rem;">${emojiMap[s.reactionType]}</div>` : ''}
+                    `;
+                    itemsDiv.appendChild(div);
+                });
+
+                modal.style.display = 'flex';
+            }
+        }
+
+        function startProgress(durationMs) {
+            const fill = document.getElementById(`story-progress-${activeStoryIdx}`);
+            if(fill) {
+                // small delay to allow CSS to apply transition
+                setTimeout(() => {
+                    fill.style.transitionDuration = `${durationMs}ms`;
+                    fill.style.width = "100%";
+                }, 50);
+            }
+        }
+
+        function nextStory(e) {
+            if(e) e.stopPropagation();
+            activeStoryIdx++;
+            renderStory();
+        }
+
+        function prevStory(e) {
+            if(e) e.stopPropagation();
+            activeStoryIdx--;
+            renderStory();
+        }
+
+        async function reactStory(type) {
+            if (activeUserIdx < 0 || activeStoryIdx < 0) return;
+            const story = userStoriesData[activeUserIdx].stories[activeStoryIdx];
+
+            // Feedback visual animation
+            showToast('Sent reaction ' + type, 'bi-heart-fill');
+
+            const res = await fetch('/Home/ToggleStoryLike', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `storyId=${story.id}&type=${type}&__RequestVerificationToken=${getToken()}`
+            });
+            const data = await res.json();
+            if(data.success) {
+                // Successfully reacted
+            }
+        }
+
+        async function deleteCurrentStory() {
+            const userGroup = userStoriesData[activeUserIdx];
+            const story = userGroup.stories[activeStoryIdx];
+            if (!confirm('Bạn có chắc chắn muốn xóa story này?')) return;
+
+            const res = await fetch('/Home/DeleteStory', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `storyId=${story.id}&__RequestVerificationToken=${getToken()}`
+            });
+            const data = await res.json();
+            if (data.success) {
+                userGroup.stories.splice(activeStoryIdx, 1);
+                if (userGroup.stories.length === 0) {
+                    userStoriesData.splice(activeUserIdx, 1);
+                    closeStoryViewer();
+                    location.reload(); // Simple way to refresh carousel
+                } else {
+                    renderStory(); // Show next story or previous if last
+                }
+                showToast('Đã xóa story', 'bi-trash');
+            }
+        }
+
+        async function deleteAllMyStories() {
+            if (!confirm('Bạn có chắc chắn muốn xóa TẤT CẢ story của mình?')) return;
+
+            const res = await fetch('/Home/DeleteAllStories', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `__RequestVerificationToken=${getToken()}`
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast('Đã xóa sạch story', 'bi-trash');
+                setTimeout(() => location.reload(), 1000);
+            }
+        }
+
+        // ── Post Menu ──
+        function togglePostMenu(id){
+            document.querySelectorAll('[id^="post-menu-"]').forEach(m=>{if(m.id!==`post-menu-${id}`)m.style.display='none';});
+            const m=document.getElementById(`post-menu-${id}`);
+            m.style.display=m.style.display==='none'?'block':'none';
+        }
+        document.addEventListener('click',e=>{if(!e.target.closest('.post-menu-toggle')&&!e.target.closest('[id^="post-menu-"]'))document.querySelectorAll('[id^="post-menu-"]').forEach(m=>m.style.display='none');});
+
+        // ── Edit Post ──
+        async function openEditPost(id){
+            document.getElementById(`post-menu-${id}`).style.display='none';
+            const d=await(await fetch(`/Home/GetPost/${id}`)).json();
+            document.getElementById('editPostId').value=id;
+            document.getElementById('editPostContent').value=d.content;
+            document.getElementById('editPostModal').style.display='flex';
+        }
+        function closeEditPost(){document.getElementById('editPostModal').style.display='none';}
+        async function saveEditPost(){
+            const id=document.getElementById('editPostId').value;
+            const content=document.getElementById('editPostContent').value.trim(); if(!content)return;
+            const fd=new FormData(); fd.append('Id',id); fd.append('Content',content); fd.append('Privacy','public'); fd.append('__RequestVerificationToken',getToken());
+            const d=await(await fetch('/Home/EditPost',{method:'POST',body:fd})).json();
+            if(d.success){
+                const bodyEl=document.getElementById(`post-body-${id}`); if(bodyEl)bodyEl.innerHTML=d.content;
+                const timeEl=document.querySelector(`#post-${id} .post-time`);
+                if(timeEl&&!timeEl.querySelector('.edited-tag')){const s=document.createElement('span');s.className='edited-tag';s.style.cssText='color:var(--text-muted);font-size:.75rem;';s.textContent=' · edited';timeEl.appendChild(s);}
+                closeEditPost();
+                showToast('Post updated', 'bi-pencil');
+            }
+        }
+
+        // ── Reaction Picker ──
+        function showPicker(postId) {
+            const el = document.getElementById(`picker-${postId}`);
+            if(el) el.style.display = 'block';
+        }
+
+        function hidePicker(postId) {
+            const el = document.getElementById(`picker-${postId}`);
+            setTimeout(() => {
+                if(el && !el.matches(':hover')) el.style.display = 'none';
+            }, 300);
+        }
+
+        async function toggleLike(postId, btn, type = 'like') {
+            const res  = await fetch('/Home/ToggleLike', {
+                method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+                body:`postId=${postId}&type=${type}&__RequestVerificationToken=${getToken()}`
+            });
+            const data = await res.json();
+            
+            const mainBtn = document.getElementById(`like-btn-${postId}`);
+            mainBtn.classList.toggle('liked', data.liked);
+            
+            const iconEl = mainBtn.querySelector('i');
+            const labelEl = mainBtn.querySelector('span');
+            
+            const finalType = data.reactionType || type;
+            const colors = {like:'#0d6efd', love:'#ff4d6d', haha:'#ffc107', wow:'#0dcaf0', sad:'#6c757d', angry:'#dc3545'};
+            const icons = {like:'bi-hand-thumbs-up-fill', love:'bi-heart-fill', haha:'bi-emoji-laughing-fill', wow:'bi-emoji-astonished-fill', sad:'bi-emoji-frown-fill', angry:'bi-emoji-angry-fill'};
+
+            if(data.liked) {
+                iconEl.className = `bi ${icons[finalType]}`;
+                iconEl.style.color = colors[finalType];
+                labelEl.style.color = colors[finalType];
+                labelEl.innerText = finalType.charAt(0).toUpperCase() + finalType.slice(1);
+            } else {
+                iconEl.className = 'bi bi-heart';
+                iconEl.style.color = 'inherit';
+                labelEl.style.color = 'inherit';
+                labelEl.innerText = 'Like';
+            }
+
+            // Update reaction summary bar to match
+            const card = document.getElementById(`post-${postId}`);
+            const likeSpan = card.querySelector('.reaction-info');
+            if (likeSpan) {
+                if (data.liked && data.likeCount > 0) {
+                    likeSpan.innerHTML = `<i class="bi ${icons[finalType]}" style="color:${colors[finalType]};"></i> ${data.likeCount}`;
+                } else {
+                    likeSpan.innerHTML = `<i class="bi bi-heart-fill" style="color:var(--brand);"></i> ${data.likeCount}`;
+                }
+            }
+            
+            const picker = document.getElementById(`picker-${postId}`);
+            if(picker) picker.style.display = 'none';
+        }
+
+        // ── Comments ──
+        function toggleComments(postId) {
+            const el = document.getElementById(`comments-${postId}`);
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function loadAllComments(postId){
+            const btn=document.getElementById(`view-all-btn-${postId}`);
+            if(btn)btn.textContent='Loading...';
+            const list=await(await fetch(`/Home/AllComments?postId=${postId}`)).json();
+            const container=document.getElementById(`comments-list-${postId}`);
+            container.innerHTML='';
+            list.forEach(c=>{
+                const d=document.createElement('div'); d.className='comment-item'; d.id=`comment-${c.id}`; d.style.position='relative';
+                d.innerHTML=`
+                    ${c.authorAvatar?`<img src="${c.authorAvatar}" class="comment-avatar" alt=""/>`:`<div class="comment-avatar">${c.authorName[0]}</div>`}
+                    <div class="comment-bubble">
+                        <div class="comment-author">${c.authorName}</div>
+                        <div class="comment-text">${c.content}</div>
+                    </div>
+                    ${c.isOwnComment?`<button onclick="deleteComment(${c.id})" style="position:absolute;right:0;top:0;background:rgba(255,77,109,.15);border:none;color:var(--brand);width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:.75rem;" title="Delete"><i class="bi bi-x"></i></button>`:''}`;
+                container.appendChild(d);
+            });
+            if(btn)btn.remove();
+        }
+
+        async function sendComment(postId) {
+            const input = document.getElementById(`commentInput-${postId}`);
+            const content = input.value.trim();
+            if(!content) return;
+            const res = await fetch('/Home/AddComment', {
+                method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+                body:`postId=${postId}&content=${encodeURIComponent(content)}&__RequestVerificationToken=${getToken()}`
+            });
+            const data = await res.json();
+            input.value = '';
+            const container = document.getElementById(`comments-list-${postId}`);
+            const div = document.createElement('div');
+            div.className = 'comment-item'; div.id = `comment-${data.commentId}`; div.style.position = 'relative';
+            div.innerHTML = `
+                <div class="comment-avatar">${data.authorName[0]}</div>
+                <div class="comment-bubble"><div class="comment-author">${data.authorName}</div><div class="comment-text">${data.content}</div></div>
+                <button onclick="deleteComment(${data.commentId})" style="position:absolute;right:0;top:0;background:rgba(255,77,109,.15);border:none;color:var(--brand);width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:.75rem;" title="Delete"><i class="bi bi-x"></i></button>`;
+            container.appendChild(div);
+            const cc=document.getElementById(`comment-count-${postId}`);
+            if(cc){const n=parseInt(cc.textContent);cc.textContent=`${n+1} comments`;}
+        }
+
+        async function deleteComment(id){
+            const d=await(await fetch('/Home/DeleteComment',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`commentId=${id}&__RequestVerificationToken=${getToken()}`})).json();
+            if(d.success){const el=document.getElementById(`comment-${id}`);if(el){el.style.opacity='0';el.style.transition='opacity .2s';setTimeout(()=>el.remove(),200);}}
+        }
+
+        // ── Delete Post ──
+        async function deletePost(postId) {
+            if(!confirm('Delete this post?')) return;
+            const res = await fetch('/Home/DeletePost', {
+                method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+                body:`postId=${postId}&__RequestVerificationToken=${getToken()}`
+            });
+            const data = await res.json();
+            if(data.success) {
+                const el = document.getElementById(`post-${postId}`);
+                el.style.transition = 'opacity .3s, transform .3s';
+                el.style.opacity = '0';
+                el.style.transform = 'scale(.97)';
+                setTimeout(() => el.remove(), 300);
+                showToast('Post deleted', 'bi-trash');
+            }
+        }
+
+        // ── Infinite scroll ──
+        window.onscroll = async () => {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) {
+                if (!loading && hasMore) {
+                    loading = true;
+                    document.getElementById('feed-loader').style.display = 'block';
+                    const res = await fetch(`/Home/GetMorePosts?page=${page}`);
+                    if (res.status === 204) { hasMore = false; }
+                    else {
+                        const html = await res.text();
+                        document.getElementById('posts-wrapper').insertAdjacentHTML('beforeend', html);
+                        page++;
+                    }
+                    loading = false;
+                    document.getElementById('feed-loader').style.display = 'none';
+                }
+            }
+        };
+    </script>
+}

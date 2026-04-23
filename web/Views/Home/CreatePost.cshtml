@@ -1,0 +1,436 @@
+@model web.Models.CreatePostViewModel
+@{
+    Layout = null;
+    var postType = ViewContext.HttpContext.Request.Query["type"].ToString();
+    if (string.IsNullOrEmpty(postType)) postType = "text";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+    <title>Create Post – Nexus</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <style>
+        :root {
+            --brand: #ff4d6d;
+            --brand-glow: rgba(255, 77, 109, 0.4);
+            --dark: #080808;
+            --card: rgba(22, 22, 22, 0.7);
+            --glass: rgba(36, 36, 36, 0.4);
+            --border: rgba(255, 255, 255, 0.08);
+            --text-main: #f0f0f0;
+            --text-muted: #a0a0a0;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body { 
+            background: var(--dark); 
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(255, 77, 109, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(167, 139, 250, 0.05) 0%, transparent 40%);
+            color: var(--text-main); 
+            font-family: 'Inter', sans-serif; 
+            min-height: 100vh;
+        }
+
+        .glass-effect {
+            background: var(--card);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+        }
+
+        /* Navbar */
+        .navbar {
+            background: rgba(8, 8, 8, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .brand { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.6rem; color: #fff; text-decoration: none; letter-spacing: -1px; }
+        .brand span { color: var(--brand); text-shadow: 0 0 15px var(--brand-glow); }
+        .nav-back { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; font-weight: 600; transition: var(--transition); display: flex; align-items: center; gap: 0.5rem; }
+        .nav-back:hover { color: #fff; transform: translateX(-4px); }
+
+        /* Layout */
+        .page-wrap { display: grid; grid-template-columns: 1fr 300px; gap: 2.5rem; max-width: 1000px; margin: 3rem auto; padding: 0 1.5rem; align-items: flex-start; }
+
+        /* Editor */
+        .editor-header { padding: 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; }
+        .user-avatar { width: 48px; height: 48px; border-radius: 14px; background: var(--glass); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--brand); font-weight: 800; font-size: 1.2rem; }
+        .editor-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.3rem; color: #fff; letter-spacing: -0.5px; }
+
+        .type-tabs { display: flex; gap: 0.6rem; padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+        .type-tab { 
+            display: flex; align-items: center; gap: 0.5rem; 
+            padding: 0.6rem 1.2rem; border-radius: 12px; 
+            border: 1px solid var(--border); background: var(--glass); 
+            color: var(--text-muted); font-size: 0.85rem; font-weight: 600;
+            cursor: pointer; white-space: nowrap; transition: var(--transition);
+        }
+        .type-tab:hover { border-color: #666; color: #fff; }
+        .type-tab.active { background: var(--brand); border-color: var(--brand); color: #fff; box-shadow: 0 4px 15px var(--brand-glow); }
+
+        .form-section { display: none; padding: 1.5rem; min-height: 200px; }
+        .form-section.active { display: block; animation: fadeIn 0.3s ease; }
+        @@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .post-textarea { 
+            background: rgba(255,255,255,0.03); border: 1px solid var(--border); 
+            border-radius: 16px; color: #fff; width: 100%; 
+            padding: 1.2rem; font-size: 1.05rem; resize: none; 
+            line-height: 1.6; font-family: inherit; transition: var(--transition);
+        }
+        .post-textarea:focus { outline: none; border-color: var(--brand); background: rgba(255,255,255,0.06); }
+        .char-counter { text-align: right; color: var(--text-muted); font-size: 0.8rem; margin-top: 0.6rem; font-weight: 500; }
+
+        /* Media upload */
+        .upload-area { 
+            border: 2px dashed var(--border); border-radius: 18px; 
+            padding: 3rem; text-align: center; cursor: pointer; 
+            transition: var(--transition); margin-bottom: 1.5rem;
+            background: var(--glass);
+        }
+        .upload-area:hover, .upload-area.dragover { border-color: var(--brand); background: rgba(255, 77, 109, 0.05); }
+        .upload-icon { font-size: 2.5rem; color: var(--text-muted); margin-bottom: 0.8rem; }
+        .upload-text { color: var(--text-muted); font-size: 0.95rem; font-weight: 500; }
+        .upload-text span { color: var(--brand); font-weight: 700; }
+        
+        .preview-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+        .preview-item { position: relative; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); }
+        .preview-item img, .preview-item video { width: 100%; max-height: 400px; object-fit: cover; }
+        .preview-remove { 
+            position: absolute; top: 1rem; right: 1rem; 
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.2); color: #fff; 
+            border-radius: 50%; width: 32px; height: 32px; 
+            display: flex; align-items: center; justify-content: center; 
+            cursor: pointer; transition: var(--transition);
+        }
+        .preview-remove:hover { background: var(--brand); border-color: var(--brand); transform: rotate(90deg); }
+
+        /* Polls */
+        .poll-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); font-weight: 700; margin-bottom: 1rem; }
+        .poll-option-row { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.8rem; }
+        .poll-input { 
+            background: var(--glass); border: 1px solid var(--border); 
+            border-radius: 12px; color: #fff; padding: 0.8rem 1.2rem; 
+            font-size: 0.95rem; flex: 1; transition: var(--transition);
+        }
+        .poll-input:focus { outline: none; border-color: var(--brand); }
+        .add-option-btn { 
+            display: flex; align-items: center; gap: 0.6rem; 
+            background: none; border: 1px dashed var(--border); 
+            border-radius: 12px; color: var(--text-muted); 
+            padding: 0.8rem; font-size: 0.9rem; font-weight: 600;
+            cursor: pointer; width: 100%; justify-content: center; 
+            transition: var(--transition); margin-top: 0.5rem;
+        }
+        .add-option-btn:hover { border-color: var(--brand); color: var(--brand); background: rgba(255,77,109,0.05); }
+
+        /* Feeling */
+        .feelings-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; margin-top: 1rem; }
+        .feeling-chip { 
+            padding: 0.8rem; border-radius: 12px; border: 1px solid var(--border); 
+            background: var(--glass); color: var(--text-main); font-size: 0.9rem; 
+            font-weight: 600; cursor: pointer; text-align: center; transition: var(--transition);
+        }
+        .feeling-chip:hover { border-color: var(--brand); transform: translateY(-2px); }
+        .feeling-chip.selected { background: var(--brand); border-color: var(--brand); color: #fff; box-shadow: 0 4px 12px var(--brand-glow); }
+
+        /* Footer */
+        .editor-footer { padding: 1.5rem; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .privacy-select { 
+            background: var(--glass); border: 1px solid var(--border); 
+            color: #fff; border-radius: 12px; padding: 0.6rem 1rem; 
+            font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: var(--transition);
+        }
+        .privacy-select:focus { outline: none; border-color: #666; }
+
+        .btn-publish { 
+            background: var(--brand); border: none; color: #fff; 
+            font-family: 'Syne', sans-serif; font-weight: 800; 
+            padding: 0.8rem 2rem; border-radius: 14px; 
+            font-size: 1rem; cursor: pointer; display: flex; 
+            align-items: center; gap: 0.6rem; transition: var(--transition);
+            box-shadow: 0 6px 20px var(--brand-glow);
+        }
+        .btn-publish:hover { background: #c9184a; transform: translateY(-2px) scale(1.02); }
+        .btn-publish:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* Tips Card */
+        .tips-card { padding: 1.5rem; position: sticky; top: 100px; }
+        .tips-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1rem; margin-bottom: 1.5rem; color: #fff; }
+        .tip-item { display: flex; gap: 1rem; margin-bottom: 1.2rem; }
+        .tip-icon { 
+            width: 40px; height: 40px; border-radius: 12px; 
+            background: rgba(255, 77, 109, 0.1); border: 1px solid rgba(255, 77, 109, 0.2);
+            display: flex; align-items: center; justify-content: center; 
+            color: var(--brand); font-size: 1.1rem; flex-shrink: 0;
+        }
+        .tip-text { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; }
+        .tip-text strong { color: #fff; }
+
+        @@media(max-width: 850px) { .page-wrap { grid-template-columns: 1fr; } .tips-card { display: none; } }
+    </style>
+</head>
+<body>
+
+<nav class="navbar">
+    <a href="@Url.Action("Index","Home")" class="nav-back"><i class="bi bi-chevron-left"></i> Back to Feed</a>
+    <a href="@Url.Action("Index","Home")" class="brand">Nex<span>us</span></a>
+    <div style="width: 100px"></div>
+</nav>
+
+<div class="page-wrap">
+    <div class="editor-card glass-effect">
+        <div class="editor-header">
+            <div class="user-avatar"><i class="bi bi-person"></i></div>
+            <div class="editor-title">Create a Post</div>
+        </div>
+
+        <div class="type-tabs">
+            <button type="button" class="type-tab @(postType=="text"?"active":"")" onclick="switchType('text',this)">
+                <i class="bi bi-pencil-square"></i> Post
+            </button>
+            <button type="button" class="type-tab @(postType=="media"?"active":"")" onclick="switchType('media',this)">
+                <i class="bi bi-image"></i> Photo
+            </button>
+            <button type="button" class="type-tab @(postType=="feeling"?"active":"")" onclick="switchType('feeling',this)">
+                <i class="bi bi-emoji-smile"></i> Feeling
+            </button>
+            <button type="button" class="type-tab @(postType=="poll"?"active":"")" onclick="switchType('poll',this)">
+                <i class="bi bi-bar-chart-line"></i> Poll
+            </button>
+        </div>
+
+        <form asp-controller="Home" asp-action="CreatePost" method="post" enctype="multipart/form-data" id="postForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="PostType" id="postTypeInput" value="@postType"/>
+            <input type="hidden" name="Feeling"  id="feelingInput"  value=""/>
+            
+            <div class="mb-3 d-flex align-items-center gap-2">
+                <i class="bi bi-eye text-muted"></i>
+                <select name="Privacy" id="privacyInput" class="form-select form-select-sm" style="width: auto; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: #fff; border-radius: 8px;">
+                    <option value="public" selected>Public (Everyone)</option>
+                    <option value="followers">Followers Only</option>
+                    <option value="private">Private (Only Me)</option>
+                </select>
+            </div>
+
+            <!-- TEXT -->
+            <div class="form-section @(postType=="text"?"active":"")" id="section-text">
+                <textarea name="Content" class="post-textarea" rows="6" maxlength="2000"
+                          placeholder="What's on your mind?" oninput="document.getElementById('charCount').textContent = this.value.length"></textarea>
+                <div class="char-counter"><span id="charCount">0</span>/2000</div>
+            </div>
+
+            <!-- MEDIA -->
+            <div class="form-section @(postType=="media"?"active":"")" id="section-media">
+                <textarea name="Content" class="post-textarea" rows="3" placeholder="Add a caption..." style="margin-bottom:1.5rem;"></textarea>
+                <div class="upload-area" id="uploadArea"
+                     ondragover="event.preventDefault();this.classList.add('dragover')"
+                     ondragleave="this.classList.remove('dragover')"
+                     ondrop="handleDrop(event)"
+                     onclick="document.getElementById('filePicker').click()">
+                    <div class="upload-icon"><i class="bi bi-cloud-upload"></i></div>
+                    <div class="upload-text">Drag & drop or <span>browse files</span></div>
+                    <div class="upload-text" style="font-size:0.75rem; margin-top:0.4rem; opacity:0.6;">Maximum 10 files. Up to 50MB each.</div>
+                </div>
+                <input type="file" id="filePicker" accept="image/*,video/*" multiple style="display:none" onchange="handleFileSelect(this)"/>
+                <input type="file" name="MediaFiles" id="fileInput" multiple style="display:none" />
+                <div class="preview-grid" id="previewGrid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));"></div>
+            </div>
+
+            <!-- FEELING -->
+            <div class="form-section @(postType=="feeling"?"active":"")" id="section-feeling">
+                <textarea name="Content" class="post-textarea" rows="4" placeholder="How are you feeling right now?"></textarea>
+                <div class="feelings-grid">
+                    @foreach (var f in new[]{"😊 Happy","🎉 Excited","🙏 Blessed","😎 Cool","😢 Sad","😤 Angry","🥳 Festive","💪 Strong","😴 Tired","🤔 Thinking","❤️ Love","✨ Magical"})
+                    {
+                        <div class="feeling-chip" onclick="selectFeeling('@f', this)">@f</div>
+                    }
+                </div>
+            </div>
+
+            <!-- POLL -->
+            <div class="form-section @(postType=="poll"?"active":"")" id="section-poll">
+                <textarea name="Content" class="post-textarea" rows="3" placeholder="Ask your question..." style="margin-bottom:1.5rem;"></textarea>
+                <div class="poll-label">Options</div>
+                <div id="pollOptions">
+                    <div class="poll-option-row"><input type="text" name="PollOptions[0]" class="poll-input" placeholder="Option 1" required/></div>
+                    <div class="poll-option-row"><input type="text" name="PollOptions[1]" class="poll-input" placeholder="Option 2" required/></div>
+                </div>
+                <button type="button" class="add-option-btn" id="addOptionBtn" onclick="addPollOption()">
+                    <i class="bi bi-plus-lg"></i> Add another option
+                </button>
+            </div>
+
+            <div class="editor-footer">
+                <select class="privacy-select" onchange="document.getElementById('privacyInput').value=this.value">
+                    <option value="public" selected>🌍 Public</option>
+                    <option value="friends">👥 Friends</option>
+                    <option value="private">🔒 Only Me</option>
+                </select>
+                <button type="submit" class="btn-publish" id="publishBtn">
+                    Publish <i class="bi bi-arrow-right-short"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="tips-card glass-effect">
+        <div class="tips-title">💡 Posting Tips</div>
+        <div class="tip-item">
+            <div class="tip-icon"><i class="bi bi-image"></i></div>
+            <div class="tip-text">Visual content gets <strong>2x</strong> the engagement.</div>
+        </div>
+        <div class="tip-item">
+            <div class="tip-icon"><i class="bi bi-chat-text"></i></div>
+            <div class="tip-text">Ask a question to spark <strong>meaningful</strong> conversations.</div>
+        </div>
+        <div class="tip-item">
+            <div class="tip-icon"><i class="bi bi-hash"></i></div>
+            <div class="tip-text">Using <strong>#hashtags</strong> helps people find your posts.</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function switchType(type, btn) {
+        document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('section-' + type).classList.add('active');
+        btn.classList.add('active');
+        document.getElementById('postTypeInput').value = type;
+        
+        // Disable unnecessary fields
+        document.querySelectorAll('.form-section:not(.active) input, .form-section:not(.active) textarea').forEach(el => el.disabled = true);
+        document.querySelectorAll('.form-section.active input, .form-section.active textarea').forEach(el => el.disabled = false);
+    }
+
+    function selectFeeling(f, el) {
+        document.querySelectorAll('.feeling-chip').forEach(c => c.classList.remove('selected'));
+        el.classList.add('selected');
+        document.getElementById('feelingInput').value = f;
+    }
+
+    function addPollOption() {
+        const container = document.getElementById('pollOptions');
+        const count = container.querySelectorAll('.poll-option-row').length;
+        if (count >= 4) return;
+        
+        const div = document.createElement('div');
+        div.className = 'poll-option-row';
+        div.innerHTML = `<input type="text" name="PollOptions[${count}]" class="poll-input" placeholder="Option ${count + 1}" required/>
+                         <button type="button" class="btn btn-link text-muted p-1" onclick="this.parentElement.remove(); reindexPoll();">
+                            <i class="bi bi-x-lg"></i>
+                         </button>`;
+        container.appendChild(div);
+        if (count + 1 >= 4) document.getElementById('addOptionBtn').style.display = 'none';
+    }
+
+    function reindexPoll() {
+        document.querySelectorAll('#pollOptions .poll-input').forEach((inp, i) => {
+            inp.name = `PollOptions[${i}]`;
+            inp.placeholder = `Option ${i + 1}`;
+        });
+        document.getElementById('addOptionBtn').style.display = 'flex';
+    }
+
+    let selectedFiles = [];
+
+    function handleFileSelect(input) {
+        if (!input.files || input.files.length === 0) return;
+        addFiles(Array.from(input.files));
+        input.value = ''; // Reset the picker so same file can be chose again
+    }
+
+    function addFiles(files) {
+        // Filter out any files that are already in selectedFiles to avoid duplicates if possible, 
+        // or just append them and let user decide. Let's just append.
+        selectedFiles = [...selectedFiles, ...files];
+        if (selectedFiles.length > 10) {
+            selectedFiles = selectedFiles.slice(0, 10);
+            alert("Maximum 10 files allowed. Extra files were removed.");
+        }
+        syncAndPreview();
+    }
+
+    function removeFile(index) {
+        selectedFiles.splice(index, 1);
+        syncAndPreview();
+    }
+
+    function syncAndPreview() {
+        const dt = new DataTransfer();
+        const grid = document.getElementById('previewGrid');
+        grid.innerHTML = '';
+
+        selectedFiles.forEach((file, index) => {
+            dt.items.add(file);
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const div = document.createElement('div');
+                div.className = 'preview-item';
+                div.style.height = '150px';
+                if (file.type.startsWith('video/')) {
+                    div.innerHTML = `<video src="${e.target.result}" muted style="height:100%; object-fit:cover;"></video>`;
+                } else {
+                    div.innerHTML = `<img src="${e.target.result}" alt="Preview" style="height:100%; object-fit:cover;"/>`;
+                }
+                div.innerHTML += `<button type="button" class="preview-remove" style="width:24px; height:24px; font-size:0.7rem;" onclick="removeFile(${index})"><i class="bi bi-x-lg"></i></button>`;
+                grid.appendChild(div);
+            }
+            reader.readAsDataURL(file);
+        });
+
+        // This is where we feed the files back into the hidden form input
+        document.getElementById('fileInput').files = dt.files;
+    }
+
+    function clearMedia() {
+        selectedFiles = [];
+        syncAndPreview();
+        document.getElementById('uploadArea').style.display = 'block';
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        this.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+            addFiles(Array.from(e.dataTransfer.files));
+        }
+    }
+
+    // Init on load
+    window.addEventListener('DOMContentLoaded', () => {
+        const activeTab = document.querySelector('.type-tab.active');
+        if (activeTab) {
+            const type = document.getElementById('postTypeInput').value;
+            // Run switch logic without the btn param to disable other fields
+            document.querySelectorAll('.form-section:not(.active) input, .form-section:not(.active) textarea').forEach(el => el.disabled = true);
+            document.querySelectorAll('.form-section.active input, .form-section.active textarea').forEach(el => el.disabled = false);
+        }
+    });
+
+    document.getElementById('postForm').onsubmit = function() {
+        const type = document.getElementById('postTypeInput').value;
+        const publishBtn = document.getElementById('publishBtn');
+        publishBtn.disabled = true;
+        publishBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Publishing...';
+    };
+</script>
+
+</body>
+</html>

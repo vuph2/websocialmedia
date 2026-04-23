@@ -1,0 +1,113 @@
+@model web.Models.SettingsViewModel
+@{
+    ViewData["Title"] = "Settings";
+}
+
+<div class="glass-effect" style="padding: 2.5rem; border-radius: 24px; max-width: 800px; margin: 0 auto;">
+    <h2 style="font-family:'Syne',sans-serif;font-weight:800;margin-bottom:1.5rem;">Profile Settings</h2>
+
+    @if (TempData["SettingsSuccess"] != null)
+    {
+        <div class="alert alert-success" style="background:rgba(40,167,69,0.1);color:#28a745;border:1px solid rgba(40,167,69,0.2);border-radius:12px;">
+            @TempData["SettingsSuccess"]
+        </div>
+    }
+
+    <form asp-action="Settings" method="post" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label class="form-label" style="color:var(--text-muted);font-weight:600;font-size:0.85rem;text-transform:uppercase;letter-spacing:1px;">First Name</label>
+                <input asp-for="FirstName" class="form-control" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);color:#fff;border-radius:12px;padding:0.8rem;" />
+                <span asp-validation-for="FirstName" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" style="color:var(--text-muted);font-weight:600;font-size:0.85rem;text-transform:uppercase;letter-spacing:1px;">Last Name</label>
+                <input asp-for="LastName" class="form-control" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);color:#fff;border-radius:12px;padding:0.8rem;" />
+                <span asp-validation-for="LastName" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" style="color:var(--text-muted);font-weight:600;font-size:0.85rem;text-transform:uppercase;letter-spacing:1px;">Bio</label>
+            <textarea asp-for="Bio" class="form-control" rows="3" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);color:#fff;border-radius:12px;padding:0.8rem;"></textarea>
+            <span asp-validation-for="Bio" class="text-danger"></span>
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label" style="color:var(--text-muted);font-weight:600;font-size:0.85rem;text-transform:uppercase;letter-spacing:1px;">Profile Picture</label>
+            <input type="file" asp-for="ProfilePictureFile" accept="image/*" class="form-control" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);color:#fff;border-radius:12px;padding:0.8rem;" />
+            <span asp-validation-for="ProfilePictureFile" class="text-danger"></span>
+            <div class="form-text" style="color:var(--text-muted);font-size:0.8rem;margin-top:0.5rem;">Upload an image file to use as your avatar.</div>
+        </div>
+
+        <button type="submit" style="background:var(--brand);color:#fff;border:none;padding:0.8rem 2rem;border-radius:12px;font-weight:700;box-shadow:0 4px 15px var(--brand-glow);transition:var(--transition);cursor:pointer;">
+            Save Changes
+        </button>
+    </form>
+    <hr style="border-top: 1px solid var(--border); margin: 3rem 0; opacity: 0.3;" />
+
+    <h2 style="font-family:'Syne',sans-serif;font-weight:800;margin-bottom:1.5rem;">Security</h2>
+    
+    <div id="passwordMessage" style="display:none; margin-bottom:1rem; padding:0.8rem; border-radius:12px; font-size:0.9rem;"></div>
+
+    <form id="changePasswordForm" onsubmit="handleChangePassword(event)">
+        @Html.AntiForgeryToken()
+        <div class="mb-3">
+            <label class="form-label" style="color:var(--text-muted);font-weight:600;font-size:0.85rem;text-transform:uppercase;letter-spacing:1px;">Current Password</label>
+            <input name="CurrentPassword" type="password" required class="form-control" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);color:#fff;border-radius:12px;padding:0.8rem;" />
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label class="form-label" style="color:var(--text-muted);font-weight:600;font-size:0.85rem;text-transform:uppercase;letter-spacing:1px;">New Password</label>
+                <input name="NewPassword" type="password" required class="form-control" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);color:#fff;border-radius:12px;padding:0.8rem;" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" style="color:var(--text-muted);font-weight:600;font-size:0.85rem;text-transform:uppercase;letter-spacing:1px;">Confirm New Password</label>
+                <input name="ConfirmPassword" type="password" required class="form-control" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);color:#fff;border-radius:12px;padding:0.8rem;" />
+            </div>
+        </div>
+        <button type="submit" style="background:rgba(255,255,255,0.08);color:#fff;border:1px solid var(--border);padding:0.8rem 2rem;border-radius:12px;font-weight:700;transition:var(--transition);cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+            Update Password
+        </button>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        async function handleChangePassword(e) {
+            e.preventDefault();
+            const form = e.target;
+            const msgEl = document.getElementById('passwordMessage');
+            const btn = form.querySelector('button[type="submit"]');
+            
+            btn.disabled = true;
+            btn.innerText = 'Updating...';
+
+            const formData = new FormData(form);
+            const res = await fetch('/Account/ChangePassword', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+
+            msgEl.style.display = 'block';
+            msgEl.innerText = data.message;
+            if (data.success) {
+                msgEl.style.background = 'rgba(40,167,69,0.1)';
+                msgEl.style.color = '#28a745';
+                msgEl.style.border = '1px solid rgba(40,167,69,0.2)';
+                form.reset();
+                showToast('Password updated successfully!', 'bi-shield-check');
+            } else {
+                msgEl.style.background = 'rgba(220,53,69,0.1)';
+                msgEl.style.color = '#dc3545';
+                msgEl.style.border = '1px solid rgba(220,53,69,0.2)';
+            }
+
+            btn.disabled = false;
+            btn.innerText = 'Update Password';
+        }
+    </script>
+}

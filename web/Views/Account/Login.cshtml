@@ -1,0 +1,248 @@
+@model web.Models.LoginPageViewModel
+@{
+    ViewData["Title"] = "Welcome to Nexus";
+    Layout = null;
+    var activeTab = Model.ActiveTab ?? TempData["ActiveTab"]?.ToString() ?? "login";
+    var errorMsg  = Model.ErrorMessage ?? TempData["Error"]?.ToString();
+    var googleEnabled = ViewData["GoogleEnabled"] as bool? ?? false;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+    <style>
+        :root { --brand:#ff4d6d; --brand-dark:#c9184a; --dark:#0d0d0d; --card-bg:#161616; --muted:#888; --border:#2a2a2a; }
+        * { box-sizing:border-box; margin:0; padding:0; }
+        body { background:var(--dark); font-family:'DM Sans',sans-serif; min-height:100vh; display:flex; color:#fff; }
+
+        /* Left panel */
+        .left-panel { width:55%; background:linear-gradient(135deg,#1a0010 0%,#0d0d0d 50%,#001a1a 100%); display:flex; flex-direction:column; justify-content:center; padding:4rem 5rem; position:relative; overflow:hidden; }
+        .left-panel::before { content:''; position:absolute; width:500px; height:500px; background:radial-gradient(circle,rgba(255,77,109,.18) 0%,transparent 70%); top:-100px; left:-100px; border-radius:50%; animation:pulse 6s ease-in-out infinite; }
+        .left-panel::after { content:''; position:absolute; width:400px; height:400px; background:radial-gradient(circle,rgba(255,209,102,.1) 0%,transparent 70%); bottom:-80px; right:-80px; border-radius:50%; animation:pulse 8s ease-in-out infinite reverse; }
+        @@keyframes pulse { 0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.2);opacity:.7} }
+        .brand-logo { font-family:'Syne',sans-serif; font-weight:800; font-size:2.8rem; color:#fff; letter-spacing:-1px; position:relative; z-index:1; margin-bottom:1rem; }
+        .brand-logo span { color:var(--brand); }
+        .left-tagline { font-size:1.05rem; color:var(--muted); max-width:360px; line-height:1.7; position:relative; z-index:1; margin-bottom:3rem; }
+        .feature-item { display:flex; align-items:center; gap:1rem; margin-bottom:1.4rem; position:relative; z-index:1; }
+        .feature-icon { width:42px; height:42px; background:rgba(255,77,109,.12); border:1px solid rgba(255,77,109,.3); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; color:var(--brand); flex-shrink:0; }
+        .feature-text { font-size:.9rem; color:#ccc; }
+
+        /* Right panel */
+        .right-panel { width:45%; display:flex; align-items:center; justify-content:center; padding:2rem; overflow-y:auto; }
+        .auth-card { width:100%; max-width:420px; }
+
+        /* Tabs */
+        .auth-tabs { display:flex; background:var(--card-bg); border-radius:12px; padding:5px; margin-bottom:2rem; border:1px solid var(--border); }
+        .auth-tab { flex:1; text-align:center; padding:10px; border-radius:9px; cursor:pointer; font-family:'Syne',sans-serif; font-weight:600; font-size:.9rem; color:var(--muted); transition:all .2s; border:none; background:transparent; }
+        .auth-tab.active { background:var(--brand); color:#fff; }
+
+        /* Form sections */
+        .form-section { display:none; }
+        .form-section.active { display:block; animation:fadeUp .3s ease; }
+        @@keyframes fadeUp { from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)} }
+
+        .section-title { font-family:'Syne',sans-serif; font-weight:700; font-size:1.6rem; margin-bottom:.3rem; }
+        .section-sub { color:var(--muted); font-size:.88rem; margin-bottom:1.5rem; }
+
+        /* Inputs */
+        .form-label { font-size:.82rem; font-weight:500; color:#aaa; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.4rem; }
+        .form-control { background:var(--card-bg)!important; border:1px solid var(--border)!important; color:#fff!important; border-radius:10px!important; padding:.75rem 1rem!important; font-size:.95rem; transition:border-color .2s; }
+        .form-control:focus { border-color:var(--brand)!important; box-shadow:0 0 0 3px rgba(255,77,109,.15)!important; }
+        .form-control::placeholder { color:#555!important; }
+        .input-group .form-control { border-right:none!important; border-radius:10px 0 0 10px!important; }
+        .input-group-text { background:var(--card-bg)!important; border:1px solid var(--border)!important; border-left:none!important; color:var(--muted)!important; border-radius:0 10px 10px 0!important; cursor:pointer; }
+        .input-group-text:hover { color:var(--brand)!important; }
+
+        /* Buttons */
+        .btn-brand { background:var(--brand); border:none; color:#fff; font-family:'Syne',sans-serif; font-weight:700; font-size:1rem; padding:.8rem; border-radius:10px; width:100%; transition:all .2s; cursor:pointer; }
+        .btn-brand:hover { background:var(--brand-dark); transform:translateY(-1px); box-shadow:0 8px 20px rgba(255,77,109,.35); }
+
+        /* Google button */
+        .btn-google { width:100%; display:flex; align-items:center; justify-content:center; gap:.75rem; background:#fff; border:none; border-radius:10px; padding:.75rem 1rem; font-family:'DM Sans',sans-serif; font-weight:600; font-size:.95rem; color:#1f1f1f; cursor:pointer; transition:all .2s; text-decoration:none; }
+        .btn-google:hover { background:#f0f0f0; transform:translateY(-1px); box-shadow:0 6px 16px rgba(0,0,0,.25); color:#1f1f1f; }
+        .btn-google svg { width:20px; height:20px; flex-shrink:0; }
+
+        /* Divider */
+        .divider { display:flex; align-items:center; gap:1rem; margin:1.2rem 0; color:var(--muted); font-size:.82rem; }
+        .divider::before,.divider::after { content:''; flex:1; height:1px; background:var(--border); }
+
+        /* Alerts */
+        .alert-danger { background:rgba(255,77,109,.1); border:1px solid rgba(255,77,109,.3); color:#ff8fa3; border-radius:10px; font-size:.88rem; padding:.75rem 1rem; margin-bottom:1rem; }
+        .text-danger { font-size:.8rem; margin-top:.25rem; display:block; }
+
+        .form-check-input:checked { background-color:var(--brand); border-color:var(--brand); }
+        .link-brand { color:var(--brand); text-decoration:none; font-weight:500; }
+        .link-brand:hover { text-decoration:underline; }
+
+        @@media (max-width:768px) { .left-panel{display:none} .right-panel{width:100%} }
+    </style>
+</head>
+<body>
+
+<!-- Left Panel -->
+<div class="left-panel">
+    <div class="brand-logo">Nex<span>us</span></div>
+    <p class="left-tagline">Connect, share, and explore moments that matter — all in one place.</p>
+    <div class="feature-item">
+        <div class="feature-icon"><i class="bi bi-people-fill"></i></div>
+        <span class="feature-text">Connect with friends and discover new communities</span>
+    </div>
+    <div class="feature-item">
+        <div class="feature-icon"><i class="bi bi-images"></i></div>
+        <span class="feature-text">Share photos, videos, and stories in seconds</span>
+    </div>
+    <div class="feature-item">
+        <div class="feature-icon"><i class="bi bi-chat-dots-fill"></i></div>
+        <span class="feature-text">Real-time messaging and live reactions</span>
+    </div>
+</div>
+
+<!-- Right Panel -->
+<div class="right-panel">
+    <div class="auth-card">
+
+        <div class="auth-tabs">
+            <button class="auth-tab @(activeTab == "login" ? "active" : "")" onclick="switchTab('login',this)">Log In</button>
+            <button class="auth-tab @(activeTab == "register" ? "active" : "")" onclick="switchTab('register',this)">Sign Up</button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMsg))
+        {
+            <div class="alert-danger">@errorMsg</div>
+        }
+
+        <!-- ── LOGIN ── -->
+        <div id="login" class="form-section @(activeTab == "login" ? "active" : "")">
+            <h2 class="section-title">Welcome back 👋</h2>
+            <p class="section-sub">Sign in to your Nexus account</p>
+
+            @if (googleEnabled)
+            {
+                <a href="@Url.Action("GoogleLogin","Account")" class="btn-google mb-3">
+                    <svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                    Continue with Google
+                </a>
+                <div class="divider">or sign in with email</div>
+            }
+
+            <form asp-controller="Account" asp-action="Login" method="post">
+                @Html.AntiForgeryToken()
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input asp-for="Login.Email" class="form-control" placeholder="you@example.com" />
+                    <span asp-validation-for="Login.Email" class="text-danger"></span>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Password</label>
+                    <div class="input-group">
+                        <input asp-for="Login.Password" type="password" id="loginPass" class="form-control" placeholder="••••••••" />
+                        <span class="input-group-text" onclick="togglePass('loginPass',this)"><i class="bi bi-eye-slash"></i></span>
+                    </div>
+                    <span asp-validation-for="Login.Password" class="text-danger"></span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="form-check">
+                        <input asp-for="Login.RememberMe" class="form-check-input" />
+                        <label class="form-check-label text-secondary small">Remember me</label>
+                    </div>
+                    <a href="#" class="link-brand small">Forgot password?</a>
+                </div>
+                <button type="submit" class="btn-brand">Log In</button>
+            </form>
+
+            <p class="text-center mt-4 text-secondary small">
+                Don't have an account? <a href="#" class="link-brand" onclick="switchTab('register',document.querySelectorAll('.auth-tab')[1])">Sign up</a>
+            </p>
+        </div>
+
+        <!-- ── REGISTER ── -->
+        <div id="register" class="form-section @(activeTab == "register" ? "active" : "")">
+            <h2 class="section-title">Join Nexus ✨</h2>
+            <p class="section-sub">Create your free account</p>
+
+            @if (googleEnabled)
+            {
+                <a href="@Url.Action("GoogleLogin","Account")" class="btn-google mb-3">
+                    <svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                    Sign up with Google
+                </a>
+                <div class="divider">or register with email</div>
+            }
+
+            <form asp-controller="Account" asp-action="Register" method="post">
+                @Html.AntiForgeryToken()
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label">First Name</label>
+                        <input asp-for="Register.FirstName" class="form-control" placeholder="John" />
+                        <span asp-validation-for="Register.FirstName" class="text-danger"></span>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Last Name</label>
+                        <input asp-for="Register.LastName" class="form-control" placeholder="Doe" />
+                        <span asp-validation-for="Register.LastName" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Username</label>
+                    <input asp-for="Register.Username" class="form-control" placeholder="johndoe" />
+                    <span asp-validation-for="Register.Username" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input asp-for="Register.Email" class="form-control" placeholder="you@example.com" />
+                    <span asp-validation-for="Register.Email" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <div class="input-group">
+                        <input asp-for="Register.Password" type="password" id="regPass" class="form-control" placeholder="Min. 8 characters" />
+                        <span class="input-group-text" onclick="togglePass('regPass',this)"><i class="bi bi-eye-slash"></i></span>
+                    </div>
+                    <span asp-validation-for="Register.Password" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Confirm Password</label>
+                    <input asp-for="Register.ConfirmPassword" type="password" class="form-control" placeholder="Repeat password" />
+                    <span asp-validation-for="Register.ConfirmPassword" class="text-danger"></span>
+                </div>
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="agreeTerms" required />
+                    <label class="form-check-label text-secondary small" for="agreeTerms">
+                        I agree to the <a href="#" class="link-brand">Terms</a> &amp; <a href="#" class="link-brand">Privacy Policy</a>
+                    </label>
+                </div>
+                <button type="submit" class="btn-brand">Create Account</button>
+            </form>
+
+            <p class="text-center mt-4 text-secondary small">
+                Already have an account? <a href="#" class="link-brand" onclick="switchTab('login',document.querySelectorAll('.auth-tab')[0])">Log in</a>
+            </p>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function switchTab(id, btn) {
+        document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        btn.classList.add('active');
+    }
+    function togglePass(inputId, el) {
+        const input = document.getElementById(inputId);
+        const icon = el.querySelector('i');
+        input.type = input.type === 'password' ? 'text' : 'password';
+        icon.className = input.type === 'password' ? 'bi bi-eye-slash' : 'bi bi-eye';
+    }
+</script>
+</body>
+</html>

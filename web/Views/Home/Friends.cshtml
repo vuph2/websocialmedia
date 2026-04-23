@@ -1,0 +1,225 @@
+@model web.Models.FriendsPageViewModel
+@{
+    ViewData["Title"] = "Friends";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="friends-page">
+    <div style="margin-bottom:2rem;">
+        <h2 style="font-family:'Syne'; font-weight:800; color:#fff; font-size:2rem; margin-bottom:0.5rem;">Connect</h2>
+        <p style="color:var(--text-muted);">Manage your friends and requests</p>
+    </div>
+
+    <!-- Tabs Nav -->
+    <div class="glass-effect" style="display:flex; padding:6px; margin-bottom:2rem; border-radius:16px; width:fit-content;">
+        <button id="btn-friends" class="tab-btn active" onclick="switchTab('friends')">My Friends (@Model.Friends.Count)</button>
+        <button id="btn-requests" class="tab-btn" onclick="switchTab('requests')">
+            Requests 
+            @if(Model.PendingRequests.Any()){
+                <span style="background:var(--brand); color:#fff; padding:2px 8px; border-radius:20px; font-size:0.7rem; margin-left:5px;">@Model.PendingRequests.Count</span>
+            }
+        </button>
+    </div>
+
+    <!-- Friends List -->
+    <div id="tab-friends" class="tab-content active">
+        @if (!Model.Friends.Any())
+        {
+            <div class="empty-state glass-effect" style="text-align:center; padding:4rem 2rem; border-radius:24px;">
+                <i class="bi bi-people" style="font-size:3rem; color:var(--text-muted); opacity:0.5; display:block; margin-bottom:1rem;"></i>
+                <h5 style="color:#fff;">No friends yet</h5>
+                <p style="color:var(--text-muted);">Start searching to connect with people!</p>
+                <a href="@Url.Action("Index","Home")" class="btn" style="background:var(--brand); color:#fff; margin-top:1rem; border-radius:12px; font-weight:700;">Find People</a>
+            </div>
+        }
+        else
+        {
+            <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
+                @foreach (var f in Model.Friends)
+                {
+                    <div class="glass-effect user-card" style="padding:1.5rem; display:flex; align-items:center; gap:1.2rem; transition:var(--transition); position:relative;">
+                        <a href="@Url.Action("Profile","Home", new { id = f.Id })" style="text-decoration:none; flex-shrink:0;">
+                            @if (!string.IsNullOrEmpty(f.Avatar))
+                            {
+                                <img src="@f.Avatar" style="width:70px; height:70px; border-radius:20px; object-fit:cover; border:2px solid var(--border);" />
+                            }
+                            else
+                            {
+                                <div style="width:70px; height:70px; border-radius:20px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); font-weight:800; color:var(--brand); border:2px solid var(--border); font-size:1.5rem;">@f.Name[0]</div>
+                            }
+                        </a>
+                        <div style="flex:1; min-width:0;">
+                            <a href="@Url.Action("Profile","Home", new { id = f.Id })" style="text-decoration:none;">
+                                <h5 style="color:#fff; margin:0; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">@f.Name</h5>
+                            </a>
+                            <p style="color:var(--text-muted); font-size:0.85rem; margin:4px 0 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">@(f.Bio ?? "Active member")</p>
+                            <div style="display:flex; gap:10px;">
+                                <a href="@Url.Action("Index","Chat", new { conversationId = 0 })" class="btn-sm-action"><i class="bi bi-chat-dots"></i> Message</a>
+                                <button onclick="removeFriend(@f.FriendshipId, this)" class="btn-sm-action text-danger"><i class="bi bi-person-x"></i> Unfriend</button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Requests List -->
+    <div id="tab-requests" class="tab-content">
+        @if (!Model.PendingRequests.Any())
+        {
+            <div class="empty-state glass-effect" style="text-align:center; padding:4rem 2rem; border-radius:24px;">
+                <i class="bi bi-mailbox" style="font-size:3rem; color:var(--text-muted); opacity:0.5; display:block; margin-bottom:1rem;"></i>
+                <h5 style="color:#fff;">No pending requests</h5>
+                <p style="color:var(--text-muted);">You're all caught up!</p>
+            </div>
+        }
+        else
+        {
+            <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
+                @foreach (var r in Model.PendingRequests)
+                {
+                    <div class="glass-effect user-card" id="request-@r.FriendshipId" style="padding:1.5rem; display:flex; align-items:center; gap:1.2rem;">
+                        <div style="flex-shrink:0;">
+                            @if (!string.IsNullOrEmpty(r.Avatar))
+                            {
+                                <img src="@r.Avatar" style="width:70px; height:70px; border-radius:20px; object-fit:cover; border:2px solid var(--border);" />
+                            }
+                            else
+                            {
+                                <div style="width:70px; height:70px; border-radius:20px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); font-weight:800; color:var(--brand); border:2px solid var(--border); font-size:1.5rem;">@r.Name[0]</div>
+                            }
+                        </div>
+                        <div style="flex:1; min-width:0;">
+                            <h5 style="color:#fff; margin:0; font-weight:700;">@r.Name</h5>
+                            <p style="color:var(--text-muted); font-size:0.85rem; margin:4px 0 12px;">Sent you a request</p>
+                            <div style="display:flex; gap:10px;">
+                                <button onclick="acceptRequest(@r.FriendshipId, this)" class="btn-confirm"><i class="bi bi-check-lg"></i> Accept</button>
+                                <button onclick="declineRequest(@r.FriendshipId, this)" class="btn-cancel">Decline</button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .tab-btn {
+        background: none;
+        border: none;
+        padding: 0.8rem 1.5rem;
+        color: var(--text-muted);
+        font-weight: 700;
+        font-size: 0.9rem;
+        border-radius: 12px;
+        transition: var(--transition);
+        cursor: pointer;
+    }
+    .tab-btn.active {
+        background: rgba(255, 77, 109, 0.1);
+        color: var(--brand);
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeInUp 0.4s ease forwards; }
+
+    .user-card:hover { transform: translateY(-5px); border-color: rgba(255,255,255,0.15); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+
+    .btn-sm-action {
+        text-decoration: none;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        padding: 6px 12px;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        transition: var(--transition);
+    }
+    .btn-sm-action:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+    .btn-confirm {
+        background: var(--brand);
+        color: #fff;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    .btn-confirm:hover { transform: scale(1.05); box-shadow: 0 0 15px var(--brand-glow); }
+
+    .btn-cancel {
+        background: rgba(255,255,255,0.05);
+        color: #fff;
+        border: 1px solid var(--border);
+        padding: 8px 16px;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    .btn-cancel:hover { background: rgba(255,255,255,0.1); }
+</style>
+
+@section Scripts {
+    <script>
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            document.getElementById('btn-' + tab).classList.add('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+        }
+
+        async function acceptRequest(id, btn) {
+            btn.disabled = true;
+            const res = await fetch('/Home/AcceptFriend', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `friendshipId=${id}&__RequestVerificationToken=${getToken()}`
+            });
+            const d = await res.json();
+            if (d.success) {
+                showToast("Friend request accepted!", "bi-person-check-fill");
+                setTimeout(() => location.reload(), 800);
+            }
+        }
+
+        async function declineRequest(id, btn) {
+            if(!confirm("Decline this request?")) return;
+            btn.disabled = true;
+            const res = await fetch('/Home/DeclineFriend', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `friendshipId=${id}&__RequestVerificationToken=${getToken()}`
+            });
+            const d = await res.json();
+            if (d.success) {
+                document.getElementById('request-' + id).style.opacity = '0.5';
+                document.getElementById('request-' + id).style.pointerEvents = 'none';
+                showToast("Request declined", "bi-x-circle");
+                setTimeout(() => location.reload(), 800);
+            }
+        }
+
+        async function removeFriend(id, btn) {
+            if(!confirm("Remove this friend?")) return;
+            btn.disabled = true;
+            const res = await fetch('/Home/RemoveFriend', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `friendshipId=${id}&__RequestVerificationToken=${getToken()}`
+            });
+            const d = await res.json();
+            if (d.success) {
+                showToast("Friend removed", "bi-person-dash");
+                setTimeout(() => location.reload(), 800);
+            }
+        }
+    </script>
+}

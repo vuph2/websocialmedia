@@ -1,0 +1,209 @@
+@model List<web.Models.PostFeedViewModel>
+
+@foreach (var post in Model)
+{
+    <div class="post-card glass-effect" id="post-@post.Id">
+        <div class="post-header">
+            <div class="post-meta" style="display:flex;align-items:center;gap:.8rem;">
+                <a href="@Url.Action("Profile","Home",new{id=post.AuthorId})" style="text-decoration:none;">
+                    @if (!string.IsNullOrEmpty(post.AuthorAvatar))
+                    { <img src="@post.AuthorAvatar" class="post-avatar" alt=""/> }
+                    else
+                    { <div class="post-avatar">@post.AuthorName.FirstOrDefault()</div> }
+                </a>
+                <div>
+                    <div class="post-author">
+                        <a href="@Url.Action("Profile","Home",new{id=post.AuthorId})" style="color:#fff;text-decoration:none;">@post.AuthorName</a>
+                        @if (!string.IsNullOrEmpty(post.Feeling)){ <span class="post-feeling">@post.Feeling</span> }
+                    </div>
+                    <div class="post-time">
+                        @post.CreatedAt.ToString("MMM d · h:mm tt")
+                        @if (post.UpdatedAt.HasValue){ <span style="color:var(--text-muted);font-size:.75rem;"> · edited</span> }
+                    </div>
+                </div>
+            </div>
+            @if (post.IsOwnPost)
+            {
+                <div style="position:relative;">
+                    <button class="post-menu-toggle" onclick="togglePostMenu(@post.Id)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;padding:.3rem .5rem;border-radius:8px;transition:all .2s;">
+                        <i class="bi bi-three-dots"></i>
+                    </button>
+                    <div id="post-menu-@post.Id" style="display:none;position:absolute;right:0;top:2.2rem;background:#1e1e2e;border:1px solid var(--border);border-radius:12px;padding:.4rem;min-width:130px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.4);">
+                        <button onclick="openEditPost(@post.Id)" style="display:flex;align-items:center;gap:.5rem;width:100%;background:none;border:none;color:#ccc;padding:.5rem .8rem;border-radius:8px;cursor:pointer;font-size:.87rem;text-align:left;">
+                            <i class="bi bi-pencil" style="color:var(--brand);"></i> Edit
+                        </button>
+                        <button onclick="deletePost(@post.Id)" style="display:flex;align-items:center;gap:.5rem;width:100%;background:none;border:none;color:#ff8fa3;padding:.5rem .8rem;border-radius:8px;cursor:pointer;font-size:.87rem;text-align:left;">
+                            <i class="bi bi-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (!string.IsNullOrEmpty(post.Content))
+        { <div class="post-body" id="post-body-@post.Id">@web.Helpers.HtmlFormatter.FormatPostContent(post.Content)</div> }
+
+        @if (post.ImageUrls != null && post.ImageUrls.Any())
+        {
+            var count = post.ImageUrls.Count;
+            if (count == 1)
+            {
+                <div class="post-media-container">
+                    <img src="@post.ImageUrls[0]" class="post-image" onclick="window.open('@post.ImageUrls[0]','_blank')" alt=""/>
+                </div>
+            }
+            else
+            {
+                <div class="post-media-container" style="display:grid; gap:4px; 
+                    grid-template-columns:@(count == 2 ? "1fr 1fr" : "1fr 1fr");
+                    grid-auto-rows:@(count <= 2 ? "300px" : "220px");">
+                    @for (int i = 0; i < count; i++)
+                    {
+                        var st = (count == 3 && i == 0) ? "grid-column: span 2; height: 350px;" : "height: 100%;";
+                        <div style="@st overflow:hidden; position:relative;">
+                            <img src="@post.ImageUrls[i]" class="post-gallery-img" onclick="window.open('@post.ImageUrls[i]','_blank')" alt=""/>
+                        </div>
+                    }
+                </div>
+            }
+        }
+        else if (!string.IsNullOrEmpty(post.ImageUrl))
+        {
+            <div class="post-media-container">
+                <img src="@post.ImageUrl" class="post-image" onclick="window.open('@post.ImageUrl','_blank')" alt=""/>
+            </div>
+        }
+
+        @if (post.PostType == "poll" && post.PollOptions.Any())
+        {
+            <div class="poll-wrap" id="poll-@post.Id">
+                @foreach (var opt in post.PollOptions)
+                {
+                    <div class="poll-option @(post.HasVoted?"voted":"")" onclick="@(post.HasVoted?"":$"votePoll({opt.Id},{post.Id})")">
+                        <div class="poll-bar" style="width:@(post.HasVoted?opt.Percentage:0)%"></div>
+                        <div class="poll-text">
+                            <span>@opt.OptionText @(opt.VotedByCurrentUser?"✓":"")</span>
+                            @if (post.HasVoted){ <span style="color:var(--brand);">@opt.Percentage%</span> }
+                        </div>
+                    </div>
+                }
+                <div class="poll-total" id="poll-total-@post.Id">@post.PollOptions.Sum(o=>o.VoteCount) votes</div>
+            </div>
+        }
+
+        <div class="post-reactions" id="reaction-bar-@post.Id">
+            <span class="reaction-info">
+                @{
+                    var sumIcon = "bi-heart-fill";
+                    var sumColor = "var(--brand)";
+                    if (post.IsLikedByCurrentUser) {
+                        switch(post.CurrentUserReaction) {
+                            case "love":  sumIcon = "bi-heart-fill"; sumColor = "#ff4d6d"; break;
+                            case "haha":  sumIcon = "bi-emoji-laughing-fill"; sumColor = "#ffc107"; break;
+                            case "wow":   sumIcon = "bi-emoji-astonished-fill"; sumColor = "#0dcaf0"; break;
+                            case "sad":   sumIcon = "bi-emoji-frown-fill"; sumColor = "#6c757d"; break;
+                            case "angry": sumIcon = "bi-emoji-angry-fill"; sumColor = "#dc3545"; break;
+                            default:      sumIcon = "bi-hand-thumbs-up-fill"; sumColor = "#0d6efd"; break;
+                        }
+                    }
+                }
+                <i class="bi @sumIcon" style="color:@sumColor;"></i> @post.LikeCount
+            </span>
+            <span class="reaction-info" id="comment-count-@post.Id">@post.CommentCount comments</span>
+        </div>
+
+        <div class="post-action-bar" style="position:relative;">
+            <div class="reaction-picker glass-effect" id="picker-@post.Id" style="display:none; position:absolute; bottom:100%; left:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(10px); border-radius:30px; padding:5px 10px; gap:8px; z-index:100; border:1px solid rgba(255,255,255,0.1); margin-bottom:10px;">
+                <div class="d-flex gap-2">
+                    <button onclick="toggleLike(@post.Id, this, 'like')" class="reaction-item" title="Like"><i class="bi bi-hand-thumbs-up-fill text-primary" style="font-size:1.4rem;"></i></button>
+                    <button onclick="toggleLike(@post.Id, this, 'love')" class="reaction-item" title="Love"><i class="bi bi-heart-fill text-danger" style="font-size:1.4rem;"></i></button>
+                    <button onclick="toggleLike(@post.Id, this, 'haha')" class="reaction-item" title="Haha"><i class="bi bi-emoji-laughing-fill text-warning" style="font-size:1.4rem;"></i></button>
+                    <button onclick="toggleLike(@post.Id, this, 'wow')"  class="reaction-item" title="Wow" ><i class="bi bi-emoji-astonished-fill text-info" style="font-size:1.4rem;"></i></button>
+                    <button onclick="toggleLike(@post.Id, this, 'sad')"  class="reaction-item" title="Sad" ><i class="bi bi-emoji-frown-fill text-secondary" style="font-size:1.4rem;"></i></button>
+                    <button onclick="toggleLike(@post.Id, this, 'angry')" class="reaction-item" title="Angry"><i class="bi bi-emoji-angry-fill text-danger" style="font-size:1.4rem;"></i></button>
+                </div>
+            </div>
+            
+            <button class="action-btn @(post.IsLikedByCurrentUser ? "liked" : "")" 
+                    id="like-btn-@post.Id"
+                    onclick="toggleLike(@post.Id, this, 'like')" 
+                    onmouseenter="showPicker(@post.Id)" 
+                    onmouseleave="hidePicker(@post.Id)">
+                @{
+                    var icon = "bi-heart";
+                    var color = "inherit";
+                    var label = "Like";
+                    if (post.IsLikedByCurrentUser) {
+                        label = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(post.CurrentUserReaction ?? "like");
+                        switch(post.CurrentUserReaction) {
+                            case "love": icon = "bi-heart-fill"; color = "#ff4d6d"; break;
+                            case "haha": icon = "bi-emoji-laughing-fill"; color = "#ffc107"; break;
+                            case "wow":  icon = "bi-emoji-astonished-fill"; color = "#0dcaf0"; break;
+                            case "sad":  icon = "bi-emoji-frown-fill"; color = "#6c757d"; break;
+                            case "angry": icon = "bi-emoji-angry-fill"; color = "#dc3545"; break;
+                            default: icon = "bi-hand-thumbs-up-fill"; color = "#0d6efd"; break;
+                        }
+                    }
+                }
+                <i class="bi @icon" style="color:@color"></i> <span style="color:@color">@label</span>
+            </button>
+            <button class="action-btn" onclick="toggleComments(@post.Id)">
+                <i class="bi bi-chat-text"></i> Comment
+            </button>
+            <button class="action-btn" onclick="sharePost(@post.Id)"><i class="bi bi-share"></i> Share</button>
+        </div>
+
+        <div class="comment-section" id="comments-@post.Id" style="display:none;">
+            <div class="comments-list" id="comments-list-@post.Id">
+                @foreach (var c in post.RecentComments)
+                {
+                    <div class="comment-item" id="comment-@c.Id" style="position:relative;">
+                        @if (!string.IsNullOrEmpty(c.AuthorAvatar))
+                        { <img src="@c.AuthorAvatar" class="comment-avatar" alt=""/> }
+                        else
+                        { <div class="comment-avatar">@c.AuthorName.FirstOrDefault()</div> }
+                        <div class="comment-bubble">
+                            <div class="comment-author">@c.AuthorName</div>
+                            <div class="comment-text">@web.Helpers.HtmlFormatter.FormatPostContent(c.Content)</div>
+                        </div>
+                        @if (c.IsOwnComment || post.IsOwnPost)
+                        {
+                            <button onclick="deleteComment(@c.Id)" title="Delete comment"
+                                    style="position:absolute;right:0;top:0;background:rgba(255,77,109,.15);border:none;color:var(--brand);width:22px;height:22px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.75rem;opacity:0;transition:opacity .2s;"
+                                    onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'"
+                                    class="comment-del-btn">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+            @if (post.CommentCount > 2)
+            {
+                <button id="view-all-btn-@post.Id" onclick="loadAllComments(@post.Id)"
+                        style="background:none;border:none;color:var(--brand);font-size:.83rem;cursor:pointer;padding:.3rem 0 .5rem;display:block;">
+                    View all @post.CommentCount comments
+                </button>
+            }
+            <div class="comment-input-row">
+                <input type="text" class="comment-input" placeholder="Write a comment..." id="commentInput-@post.Id"
+                       onkeydown="if(event.key==='Enter')sendComment(@post.Id)"/>
+                <button class="comment-send-btn" onclick="sendComment(@post.Id)"><i class="bi bi-send-fill"></i></button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Edit Post Modal -->
+<div id="editPostModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;align-items:center;justify-content:center;">
+    <div style="background:#1a1a2e;border:1px solid var(--border);border-radius:20px;padding:1.8rem;width:100%;max-width:520px;margin:1rem;">
+        <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;margin-bottom:1rem;"><i class="bi bi-pencil me-2" style="color:var(--brand);"></i>Edit Post</div>
+        <input type="hidden" id="editPostId"/>
+        <textarea id="editPostContent" maxlength="2000" rows="4"
+                  style="background:rgba(255,255,255,.05);border:1px solid var(--border);color:#fff;width:100%;border-radius:12px;padding:.8rem 1rem;font-size:.95rem;resize:vertical;font-family:inherit;"></textarea>
+        <div style="display:flex;gap:.6rem;justify-content:flex-end;margin-top:1rem;">
+            <button onclick="closeEditPost()" style="background:#333;border:none;color:#ccc;padding:.5rem 1.2rem;border-radius:10px;cursor:pointer;">Cancel</button>
+            <button onclick="saveEditPost()" style="background:var(--brand);border:none;color:#fff;padding:.5rem 1.2rem;border-radius:10px;font-weight:700;cursor:pointer;">Save Changes</button>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,48 @@
+@model List<web.Models.NotificationViewModel>
+@{
+    ViewData["Title"] = "Notifications";
+}
+
+<div style="max-width: 800px; margin: 0 auto;">
+    <h2 style="font-family:'Syne',sans-serif;font-weight:800;margin-bottom:1.5rem;">Notifications</h2>
+
+    @if (!Model.Any())
+    {
+        <div class="glass-effect" style="padding:4rem; text-align:center; border-radius:24px;">
+            <i class="bi bi-bell-slash" style="font-size:3rem;color:var(--text-muted);opacity:0.5;display:block;margin-bottom:1rem;"></i>
+            <p style="color:var(--text-muted);">You don't have any notifications yet.</p>
+        </div>
+    }
+    else
+    {
+        <div class="glass-effect" style="border-radius:24px;overflow:hidden;">
+            @foreach (var n in Model)
+            {
+                var icon = n.Type == "like" ? "bi-heart-fill text-danger" :
+                           n.Type == "comment" ? "bi-chat-text-fill text-primary" :
+                           n.Type == "follow" ? "bi-person-plus-fill text-success" : "bi-bell-fill text-warning";
+                           
+                var bg = n.IsRead ? "transparent" : "rgba(255, 77, 109, 0.05)";
+
+                <a href="@(string.IsNullOrEmpty(n.RelatedUrl) ? "#" : n.RelatedUrl)" style="display:block;text-decoration:none;transition:var(--transition);background:@bg;border-bottom:1px solid var(--border);">
+                    <div style="padding:1.2rem 1.5rem;display:flex;align-items:center;gap:1.2rem;">
+                        <div style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">
+                            <i class="bi @icon"></i>
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="color:#fff;font-weight:600;font-size:0.95rem;margin-bottom:0.2rem;">@n.Content</div>
+                            <div style="color:var(--text-muted);font-size:0.8rem;">
+                                @(DateTime.UtcNow.Subtract(n.CreatedAt).TotalMinutes < 60 
+                                    ? $"{(int)Math.Max(1, DateTime.UtcNow.Subtract(n.CreatedAt).TotalMinutes)}m ago" 
+                                    : $"{(int)Math.Max(1, DateTime.UtcNow.Subtract(n.CreatedAt).TotalHours)}h ago")
+                            </div>
+                        </div>
+                        @if (!n.IsRead) {
+                            <div style="width:10px;height:10px;background:var(--brand);border-radius:50%;box-shadow:0 0 10px var(--brand-glow);"></div>
+                        }
+                    </div>
+                </a>
+            }
+        </div>
+    }
+</div>

@@ -1,0 +1,206 @@
+@model web.Models.SearchViewModel
+@{
+    ViewData["Title"] = $"Search: {Model.Query}";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<p hidden id="nexus-view-marker">HOME_SEARCH</p>
+
+<style>
+    .search-result-header { margin-bottom: 2.5rem; text-align: center; }
+    .search-result-header h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 2.2rem; }
+    .search-result-header span { color: var(--brand); }
+
+    .section-title {
+        font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem;
+        text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted);
+        margin: 3rem 0 1.5rem 0;
+    }
+
+    .user-list-search { display: flex; flex-direction: column; gap: 1rem; }
+    .user-card-search {
+        padding: 1.2rem 1.5rem; display: flex; align-items: center; gap: 1.5rem;
+        text-decoration: none; color: inherit; transition: var(--transition);
+        border: 1px solid var(--border); border-radius: 20px;
+    }
+    .user-card-search:hover { transform: translateX(8px); background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.2); }
+    
+    .avatar-search {
+        width: 64px; height: 64px; border-radius: 18px; object-fit: cover;
+        border: 1px solid var(--border); flex-shrink: 0; background: var(--glass);
+        display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 800; color: var(--brand);
+    }
+    .info-search { flex-grow: 1; }
+    .name-search { font-weight: 700; font-size: 1.15rem; display: block; margin-bottom: 2px; }
+    .handle-search { color: var(--text-muted); font-size: 0.85rem; }
+
+    .btn-follow-search {
+        background: var(--brand); color: #fff; border: none; padding: 0.65rem 1.8rem;
+        border-radius: 12px; font-weight: 700; cursor: pointer; transition: var(--transition);
+        box-shadow: 0 4px 12px var(--brand-glow);
+    }
+    .btn-follow-search:hover { transform: translateY(-2px); filter: brightness(1.1); }
+    .btn-follow-search.unfollow { background: rgba(255,255,255,0.08); box-shadow: none; border: 1px solid var(--border); }
+</style>
+
+<div class="search-page-content">
+    <div class="search-result-header">
+        <h1>Nexus Results for "<span>@Model.Query</span>"</h1>
+    </div>
+
+    @if (!Model.Users.Any() && !Model.Posts.Any())
+    {
+        <div class="glass-effect" style="padding:5rem; text-align:center; color:var(--text-muted); border-radius:32px;">
+            <i class="bi bi-search" style="font-size:3.5rem; margin-bottom:1.5rem; display:block; opacity:0.5;"></i>
+            <p style="font-size:1.1rem;">No results found. Try broader keywords.</p>
+        </div>
+    }
+
+    @if (Model.Users.Any())
+    {
+        <h2 class="section-title">Nexus Travelers</h2>
+        <div class="user-list-search">
+            @foreach (var user in Model.Users)
+            {
+                <div class="user-card-search glass-effect">
+                    <a href="@Url.Action("Profile","Home", new { id = user.Id })" style="display:flex; align-items:center; gap:1.5rem; text-decoration:none; color:inherit; flex-grow:1;">
+                        @if (!string.IsNullOrEmpty(user.ProfilePictureUrl))
+                        {
+                            <img src="@user.ProfilePictureUrl" class="avatar-search" alt=""/>
+                        }
+                        else
+                        {
+                            <div class="avatar-search">@user.FirstName[0]</div>
+                        }
+                        <div class="info-search">
+                            <span class="name-search">@user.FirstName @user.LastName</span>
+                            <span class="handle-search">@@@user.Email.Split('@')[0]</span>
+                        </div>
+                    </a>
+                    
+                    @if (user.Id != User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value)
+                    {
+                        <div id="friendship-actions-@user.Id" style="display:flex; gap:10px; align-items:center;">
+                            @if (user.FriendshipStatus == "None")
+                            {
+                                <button type="button" class="btn-follow-search" onclick="performFriendshipAction('AddFriend', { targetUserId: '@user.Id' }, this)"><i class="bi bi-person-plus-fill me-2"></i>Add Friend</button>
+                            }
+                            else if (user.FriendshipStatus == "Friends")
+                            {
+                                <button type="button" class="btn-follow-search unfollow" onclick="performFriendshipAction('RemoveFriend', { friendshipId: @user.FriendshipId, userId: '@user.Id' }, this)"><i class="bi bi-person-check-fill me-2"></i>Friends</button>
+                            }
+                            else if (user.FriendshipStatus == "PendingSent")
+                            {
+                                <button class="btn-follow-search unfollow" disabled><i class="bi bi-clock me-2"></i>Pending</button>
+                            }
+                            else if (user.FriendshipStatus == "PendingReceived")
+                            {
+                                <div style="display:flex; gap:5px;">
+                                    <button type="button" class="btn-follow-search" onclick="performFriendshipAction('AcceptFriend', { friendshipId: @user.FriendshipId, userId: '@user.Id' }, this)"><i class="bi bi-check-lg" style="margin-right:0;"></i></button>
+                                    <button type="button" class="btn-follow-search unfollow" onclick="performFriendshipAction('DeclineFriend', { friendshipId: @user.FriendshipId, userId: '@user.Id' }, this)"><i class="bi bi-x-lg" style="margin-right:0;"></i></button>
+                                </div>
+                            }
+
+                            <!-- Nút Follow độc lập -->
+                            <button class="btn-follow-search @(user.IsFollowing ? "unfollow" : "")" onclick="toggleFollow('@user.Id', this)" style="padding:0.65rem 1rem;">
+                                @if (user.IsFollowing)
+                                {
+                                    <span><i class="bi bi-person-check"></i></span>
+                                }
+                                else
+                                {
+                                    <span><i class="bi bi-person-plus"></i></span>
+                                }
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+
+    @if (Model.Posts.Any())
+    {
+        <h2 class="section-title">Echoes (Posts)</h2>
+        <div class="search-posts">
+            @await Html.PartialAsync("_PostList", Model.Posts.Select(p => new web.Models.PostFeedViewModel 
+            {
+                Id = p.Id,
+                Content = p.Content,
+                ImageUrl = p.ImageUrl,
+                AuthorName = $"{p.User.FirstName} {p.User.LastName}",
+                AuthorAvatar = p.User.ProfilePictureUrl,
+                AuthorId = p.UserId,
+                CreatedAt = p.CreatedAt,
+                LikeCount = p.Likes.Count,
+                CommentCount = p.Comments.Count,
+                IsOwnPost = p.UserId == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            }).ToList())
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        function updateFriendshipUI(userId, status, friendshipId) {
+            const container = document.getElementById(`friendship-actions-${userId}`);
+            if (!container) return;
+
+            // Save independent follow button
+            const followBtn = container.querySelector('button[onclick*="toggleFollow"]');
+
+            let html = '';
+            if (status === 'Friends') {
+                html = `<button type="button" class="btn-follow-search unfollow" onclick="performFriendshipAction('RemoveFriend', { friendshipId: ${friendshipId}, userId: '${userId}' }, this)"><i class="bi bi-person-check-fill me-2"></i>Friends</button>`;
+            } else if (status === 'PendingSent') {
+                html = `<button class="btn-follow-search unfollow" disabled><i class="bi bi-clock me-2"></i>Pending</button>`;
+            } else if (status === 'PendingReceived') {
+                html = `
+                    <div style="display:flex; gap:5px;">
+                        <button type="button" class="btn-follow-search" onclick="performFriendshipAction('AcceptFriend', { friendshipId: ${friendshipId}, userId: '${userId}' }, this)"><i class="bi bi-check-lg" style="margin-right:0;"></i></button>
+                        <button type="button" class="btn-follow-search unfollow" onclick="performFriendshipAction('DeclineFriend', { friendshipId: ${friendshipId}, userId: '${userId}' }, this)"><i class="bi bi-x-lg" style="margin-right:0;"></i></button>
+                    </div>
+                `;
+            } else {
+                html = `<button type="button" class="btn-follow-search" onclick="performFriendshipAction('AddFriend', { targetUserId: '${userId}' }, this)"><i class="bi bi-person-plus-fill me-2"></i>Add Friend</button>`;
+            }
+
+            container.innerHTML = html;
+            if (followBtn) container.appendChild(followBtn);
+        }
+
+        async function toggleLike(postId, btn) {
+            btn.style.transform = 'scale(1.2)';
+            setTimeout(() => btn.style.transform = 'scale(1)', 150);
+            const res  = await fetch('/Home/ToggleLike', {
+                method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+                body:`postId=${postId}&__RequestVerificationToken=${getToken()}`
+            });
+            const data = await res.json();
+            btn.classList.toggle('liked', data.liked);
+            const icon = btn.querySelector('i');
+            icon.className = data.liked ? 'bi bi-heart-fill' : 'bi bi-heart';
+            const card = document.getElementById(`post-${postId}`);
+            const likeSpan = card.querySelector('.reaction-info');
+            if (likeSpan) likeSpan.innerHTML = `<i class="bi bi-heart-fill" style="color:var(--brand);"></i> ${data.likeCount}`;
+        }
+        function toggleComments(postId) {
+            document.getElementById(`comments-${postId}`).classList.toggle('open');
+        }
+        async function sendComment(postId) {
+            const input = document.getElementById(`commentInput-${postId}`);
+            const content = input.value.trim();
+            if(!content) return;
+            const res = await fetch('/Home/AddComment', {
+                method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+                body:`postId=${postId}&content=${encodeURIComponent(content)}&__RequestVerificationToken=${getToken()}`
+            });
+            const data = await res.json();
+            input.value = '';
+            const list = document.querySelector(`#comments-${postId} .comments-list`);
+            const div = document.createElement('div');
+            div.className = 'comment-item';
+            div.innerHTML = `<div class="comment-avatar">${data.authorName[0]}</div><div class="comment-bubble"><div class="comment-author">${data.authorName}</div><div class="comment-text">${data.content}</div></div>`;
+            list.appendChild(div);
+        }
+    </script>
+}

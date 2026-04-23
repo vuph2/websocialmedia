@@ -1,0 +1,17 @@
+# .gitignore for ASP.NET Core
+[Bb]in/
+[Oo]bj/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Databases
+Databases/*.mdf
+Databases/*.ldf
+
+# User-specific files
+.idea/
+.vscode/
+.DS_Store

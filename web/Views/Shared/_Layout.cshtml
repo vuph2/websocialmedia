@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Nexus</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <style>
+        :root {
+            --brand: #ff4d6d;
+            --brand-glow: rgba(255, 77, 109, 0.4);
+            --dark: #080808;
+            --card: rgba(22, 22, 22, 0.7);
+            --glass: rgba(36, 36, 36, 0.4);
+            --border: rgba(255, 255, 255, 0.08);
+            --text-main: #f0f0f0;
+            --text-muted: #a0a0a0;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body { 
+            background: var(--dark); 
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(255, 77, 109, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(167, 139, 250, 0.05) 0%, transparent 40%);
+            color: var(--text-main); 
+            font-family: 'Inter', sans-serif; 
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .glass-effect {
+            background: var(--card);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+        }
+
+        /* Navbar */
+        .navbar {
+            background: rgba(8, 8, 8, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 0.9rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .brand { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.8rem; color: #fff; text-decoration: none; letter-spacing: -1px; }
+        .brand span { color: var(--brand); text-shadow: 0 0 15px var(--brand-glow); }
+        
+        .search-bar { flex: 1; max-width: 400px; margin: 0 3rem; position: relative; }
+        .search-bar input { 
+            background: var(--glass); 
+            border: 1px solid var(--border); 
+            color: #fff; 
+            border-radius: 14px; 
+            padding: 0.6rem 1.2rem 0.6rem 2.8rem; 
+            font-size: 0.9rem; 
+            width: 100%; 
+            transition: var(--transition);
+        }
+        .search-bar input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 4px rgba(255, 77, 109, 0.1); }
+        .search-bar i { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
+
+        .nav-actions { display: flex; align-items: center; gap: 1rem; }
+        .nav-icon-btn { 
+            width: 42px; height: 42px; 
+            background: var(--glass); 
+            border: 1px solid var(--border); 
+            border-radius: 12px; 
+            display: flex; align-items: center; justify-content: center; 
+            color: var(--text-muted); text-decoration: none; 
+            font-size: 1.2rem; transition: var(--transition);
+            position: relative;
+        }
+        .nav-icon-btn:hover { color: #fff; border-color: #666; transform: translateY(-2px); background: rgba(255,255,255,0.05); }
+
+        /* Layout */
+        .layout { display: grid; grid-template-columns: 260px 1fr 300px; gap: 2rem; max-width: 1240px; margin: 2rem auto; padding: 0 1.5rem; }
+        @@media(max-width: 1100px) { .layout { grid-template-columns: 260px 1fr; } .right-sidebar { display: none; } }
+        @@media(max-width: 900px) { .layout { grid-template-columns: 1fr; } .sidebar, .right-sidebar { display: none; } }
+
+        /* Sidebar Nav */
+        .sidebar { position: sticky; top: 90px; height: fit-content; }
+        .nav-link-item { 
+            display: flex; align-items: center; gap: 1rem; 
+            padding: 0.8rem 1.2rem; border-radius: 14px; 
+            color: var(--text-muted); text-decoration: none; 
+            font-size: 0.95rem; font-weight: 500;
+            transition: var(--transition); margin-bottom: 0.4rem;
+        }
+        .nav-link-item:hover, .nav-link-item.active { background: rgba(255, 77, 109, 0.1); color: var(--brand); }
+        .nav-link-item i { font-size: 1.25rem; width: 24px; text-align: center; }
+        .sidebar-nav { padding: 1rem; }
+        .sidebar-title { font-size: .75rem; text-transform: uppercase; letter-spacing: .1em; color: var(--text-muted); padding: .5rem 1.2rem; font-weight: 700; }
+
+        /* Toasts */
+        .toast-container {
+            position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
+            z-index: 9999; display: flex; flex-direction: column; gap: 0.8rem; pointer-events: none;
+        }
+        .modern-toast {
+            background: var(--glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border); color: #fff; padding: 1rem 2rem; border-radius: 16px;
+            font-weight: 600; font-size: 0.9rem; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            display: flex; align-items: center; gap: 0.8rem;
+            animation: toast-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            pointer-events: auto;
+        }
+        @@keyframes toast-in {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modern-toast i { color: var(--brand); font-size: 1.2rem; }
+
+        /* General Post Fixes for Layout */
+        .feed { min-width: 0; }
+        .post-card { margin-bottom: 2rem; padding: 1.8rem; animation: fadeInUp 0.5s ease backwards; transition: var(--transition); }
+        .post-card:hover { border-color: rgba(255, 255, 255, 0.12); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); }
+        @@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Post Header */
+        .post-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+        .post-avatar {
+            width: 44px; height: 44px; border-radius: 14px; object-fit: cover;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, rgba(255, 77, 109, 0.2), rgba(167, 139, 250, 0.2));
+            border: 1px solid var(--border); color: var(--brand); font-weight: 800;
+            font-size: 1rem; flex-shrink: 0;
+        }
+        img.post-avatar { background: none; }
+        .post-author { font-weight: 700; font-size: 0.95rem; color: #fff; }
+        .post-feeling { font-size: 0.85rem; color: var(--text-muted); margin-left: 0.4rem; }
+        .post-time { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+        .post-delete-btn {
+            background: none; border: 1px solid transparent; color: var(--text-muted);
+            font-size: 1rem; padding: 0.4rem; border-radius: 10px; cursor: pointer;
+            transition: var(--transition);
+        }
+        .post-delete-btn:hover { color: #ff6b6b; background: rgba(255, 107, 107, 0.1); border-color: rgba(255, 107, 107, 0.2); }
+        
+        /* Post Media Improvements */
+        .post-media-container {
+            margin-top: 1rem;
+            border-radius: 18px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: rgba(0,0,0,0.2);
+            transition: var(--transition);
+        }
+        .post-media-container:hover { border-color: rgba(255, 255, 255, 0.15); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+        
+        .post-image {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-height: 520px;
+            object-fit: contain; /* Maintain full image if wide */
+            cursor: pointer;
+            background: #000;
+        }
+        
+        /* Multiple images gallery */
+        .post-gallery-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Crop to fill for grid uniformity */
+            cursor: pointer;
+            transition: transform 0.4s ease;
+        }
+        .post-gallery-img:hover { transform: scale(1.05); }
+
+        /* Post Body */
+        /* Link Cards & Inline Links */
+        .inline-link { color: var(--brand); text-decoration: underline; }
+        .post-body iframe { max-width: 100%; border-radius: 12px; }
+        .link-card-anchor { text-decoration: none; display: block; margin-top: 0.8rem; }
+        .link-card-container {
+            padding: 1rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+            border-radius: 14px; display: flex; align-items: center; gap: 1rem; transition: var(--transition);
+        }
+        .link-card-container:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.2); }
+        .link-card-icon {
+            width: 44px; height: 44px; border-radius: 10px; background: rgba(255,77,109,0.1);
+            display: flex; align-items: center; justify-content: center; color: var(--brand); flex-shrink: 0;
+            font-size: 1.4rem;
+        }
+        .link-card-info { min-width: 0; flex: 1; }
+        .link-card-domain { color: #fff; font-weight: 700; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .link-card-url { color: var(--text-muted); font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .link-card-arrow { color: var(--text-muted); font-size: 0.8rem; margin-left: auto; }
+
+        /* Chat Bubble Overrides (Prevent Blending) */
+        .msg-bubble .inline-link { color: #fff !important; font-weight: 600; }
+        .msg-group.theirs .msg-bubble .inline-link { color: var(--brand) !important; }
+        .msg-bubble iframe { max-width: 100%; border-radius: 8px; }
+        .msg-bubble div[style*="padding-bottom"] { max-width: 320px; }
+        
+        .msg-group.mine .link-card-container { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
+        .msg-group.mine .link-card-icon { background: #fff; color: var(--brand); }
+        .msg-group.mine .link-card-domain { color: #fff; }
+        .msg-group.mine .link-card-url { color: rgba(255,255,255,0.8); }
+        .msg-group.mine .link-card-arrow { color: rgba(255,255,255,0.8); }
+
+
+        /* Poll Styles */
+        .poll-wrap { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+        .poll-option {
+            position: relative; border: 1px solid var(--border); border-radius: 12px;
+            padding: 0.8rem 1rem; cursor: pointer; overflow: hidden; transition: var(--transition);
+        }
+        .poll-option:hover:not(.voted) { border-color: var(--brand); background: rgba(255, 77, 109, 0.05); }
+        .poll-bar { position: absolute; top: 0; left: 0; height: 100%; background: rgba(255, 77, 109, 0.1); border-radius: 12px; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+        .poll-text { position: relative; display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: 500; }
+        .poll-total { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.3rem; }
+
+        /* Reactions Row */
+        .post-reactions {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.6rem 0; border-bottom: 1px solid var(--border); margin-bottom: 0.3rem;
+        }
+        .reaction-info { font-size: 0.85rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.4rem; }
+
+        /* Action Bar */
+        .post-action-bar {
+            display: flex; border-bottom: 1px solid var(--border); padding: 0.3rem 0;
+        }
+        .action-btn {
+            flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+            padding: 0.7rem 0; font-size: 0.9rem; font-weight: 600;
+            color: var(--text-muted); background: none; border: none; border-radius: 12px;
+            cursor: pointer; transition: var(--transition);
+        }
+        .action-btn:hover { background: rgba(255, 255, 255, 0.05); color: #fff; }
+        .action-btn.liked { color: var(--brand); }
+        .action-btn.liked:hover { background: rgba(255, 77, 109, 0.1); }
+        .action-btn i { font-size: 1.15rem; }
+
+        /* Reaction Picker */
+        .reaction-picker {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 40px;
+            padding: 8px 12px;
+            z-index: 1000;
+            margin-bottom: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            animation: pickerIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @@keyframes pickerIn { from { opacity: 0; transform: translateY(10px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        
+        .reaction-item {
+            background: none; border: none; padding: 0 4px; transition: var(--transition); cursor: pointer;
+        }
+        .reaction-item:hover { transform: scale(1.3) translateY(-5px); }
+        .reaction-item i { font-size: 1.6rem; }
+
+        /* Comment Section */
+        .comment-section {
+            padding-top: 0.8rem;
+        }
+        .comments-list { display: flex; flex-direction: column; gap: 0.7rem; margin-bottom: 0.8rem; }
+        .comment-item { display: flex; gap: 0.7rem; align-items: flex-start; }
+        .comment-avatar {
+            width: 32px; height: 32px; border-radius: 10px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, rgba(255, 77, 109, 0.15), rgba(167, 139, 250, 0.15));
+            border: 1px solid var(--border); color: var(--brand); font-weight: 700;
+            font-size: 0.75rem; object-fit: cover;
+        }
+        img.comment-avatar { background: none; }
+        .comment-bubble {
+            background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border);
+            border-radius: 14px; padding: 0.6rem 1rem; flex: 1;
+        }
+        .comment-author { font-weight: 700; font-size: 0.8rem; color: #fff; margin-bottom: 2px; }
+        .comment-text { font-size: 0.85rem; color: var(--text-main); line-height: 1.5; }
+
+        /* Comment Input */
+        .comment-input-row { display: flex; gap: 0.6rem; align-items: center; }
+        .comment-input {
+            flex: 1; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border);
+            border-radius: 14px; padding: 0.6rem 1rem; color: #fff; font-size: 0.85rem;
+            transition: var(--transition); font-family: 'Inter', sans-serif;
+        }
+        .comment-input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(255, 77, 109, 0.1); }
+        .comment-input::placeholder { color: var(--text-muted); }
+        .comment-send-btn {
+            width: 38px; height: 38px; border-radius: 12px; background: var(--brand);
+            border: none; color: #fff; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: var(--transition); font-size: 0.95rem; flex-shrink: 0;
+        }
+        .comment-send-btn:hover { transform: scale(1.07); box-shadow: 0 4px 15px var(--brand-glow); }
+
+        /* Spin animation for loader */
+        @@keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Notification Badge */
+        .notif-badge {
+            position: absolute; top: 4px; right: 4px;
+            min-width: 18px; height: 18px; padding: 0 5px;
+            background: var(--brand); color: #fff; border-radius: 9px;
+            font-size: 0.65rem; font-weight: 800; line-height: 18px;
+            text-align: center; display: none;
+            box-shadow: 0 2px 8px var(--brand-glow);
+            animation: badgePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .notif-badge.visible { display: block; }
+        @@keyframes badgePop { from { transform: scale(0); } to { transform: scale(1); } }
+    </style>
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <a href="@Url.Action("Index","Home")" class="brand">Nex<span>us</span></a>
+        <div class="search-bar">
+            <i class="bi bi-search"></i>
+            <form action="@Url.Action("Search","Home")" method="get">
+                <input type="text" name="query" placeholder="Search Nexus..."/>
+            </form>
+        </div>
+        <div class="nav-actions">
+            <a href="@Url.Action("Notifications","Home")" class="nav-icon-btn" id="notifBellBtn"><i class="bi bi-bell"></i><span class="notif-badge" id="notifBadge">0</span></a>
+            <a href="@Url.Action("Index","Chat")" class="nav-icon-btn" id="chatNavBtn"><i class="bi bi-chat-square-dots"></i><span class="notif-badge" id="chatBadge">0</span></a>
+            @{
+                var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            }
+            <div class="dropdown">
+                <div class="nav-icon-btn" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="cursor:pointer;overflow:hidden;padding:0;">
+                    <i class="bi bi-person-circle"></i>
+                </div>
+                <ul class="dropdown-menu dropdown-menu-end shadow">
+                    <li><a class="dropdown-item" href="@Url.Action("Profile","Home", new { id = currentUserId })"><i class="bi bi-person me-2"></i>My Profile</a></li>
+                    <li><a class="dropdown-item" href="@Url.Action("Settings","Home")"><i class="bi bi-gear me-2"></i>Settings</a></li>
+                    <li><hr class="dropdown-divider"/></li>
+                    <li>
+                        <form asp-controller="Account" asp-action="Logout" method="post" style="margin:0;">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="dropdown-item text-danger" style="background:none;border:none;width:100%;text-align:left;">
+                                <i class="bi bi-box-arrow-right me-2"></i>Sign Out
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="layout">
+        <!-- Left Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-nav glass-effect">
+                <div class="sidebar-title">Menu</div>
+                <a href="@Url.Action("Index","Home")" class="nav-link-item @(ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")">
+                    <i class="bi bi-house-door-fill"></i> <span>Home</span>
+                </a>
+                <a href="@Url.Action("Profile","Home", new { id = currentUserId })" class="nav-link-item @(ViewContext.RouteData.Values["action"]?.ToString() == "Profile" ? "active" : "")">
+                    <i class="bi bi-person"></i> <span>Profile</span>
+                </a>
+                <a href="@Url.Action("Friends","Home")" class="nav-link-item @(ViewContext.RouteData.Values["action"]?.ToString() == "Friends" ? "active" : "")">
+                    <i class="bi bi-people"></i> <span>Friends</span>
+                </a>
+                <a href="@Url.Action("Index","Chat")" class="nav-link-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Chat" ? "active" : "")">
+                    <i class="bi bi-chat-square-dots"></i> <span>Messages</span>
+                </a>
+                <a href="@Url.Action("Notifications","Home")" class="nav-link-item @(ViewContext.RouteData.Values["action"]?.ToString() == "Notifications" ? "active" : "")">
+                    <i class="bi bi-bell"></i> <span>Notifications</span>
+                </a>
+                <a href="@Url.Action("Settings","Home")" class="nav-link-item @(ViewContext.RouteData.Values["action"]?.ToString() == "Settings" ? "active" : "")">
+                    <i class="bi bi-gear"></i> <span>Settings</span>
+                </a>
+                <div style="border-top:1px solid var(--border);margin:.5rem 0;"></div>
+                <form asp-controller="Account" asp-action="Logout" method="post" style="margin:0;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="nav-link-item" style="width:100%;background:none;border:none;text-align:left;color:#ff6b6b;cursor:pointer;">
+                        <i class="bi bi-box-arrow-right"></i> <span>Sign Out</span>
+                    </button>
+                </form>
+            </div>
+        </aside>
+
+        <main class="feed">
+            @RenderBody()
+        </main>
+
+        @if (IsSectionDefined("RightSidebar"))
+        {
+            @RenderSection("RightSidebar")
+        }
+        else
+        {
+            <!-- Default Right Sidebar if not defined -->
+            <aside class="right-sidebar">
+                <div class="widget glass-effect" style="padding:1.5rem; margin-bottom:2rem;">
+                    <div style="font-family:'Syne';font-weight:800;color:#fff;margin-bottom:1rem;">Trending</div>
+                    <p style="color:var(--text-muted);font-size:0.85rem;">Coming soon...</p>
+                </div>
+            </aside>
+        }
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script>
+        function getToken() {
+            return document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+        }
+
+        // ── Notification counter ──
+        let notifCount = 0;
+        function incrementNotifBadge() {
+            notifCount++;
+            const badge = document.getElementById('notifBadge');
+            if (badge) {
+                badge.textContent = notifCount > 99 ? '99+' : notifCount;
+                badge.classList.add('visible');
+                badge.style.animation = 'none';
+                badge.offsetHeight; // trigger reflow
+                badge.style.animation = 'badgePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            }
+        }
+
+        // ── SignalR Connection ──
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl('/nexusHub')
+            .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+            .configureLogging(signalR.LogLevel.Warning)
+            .build();
+
+        connection.on('ReceiveNotification', (data) => {
+            showToast(data.message, data.icon);
+            incrementNotifBadge();
+        });
+        
+        connection.on('FriendshipUpdated', (data) => {
+            // data: { status, fromUserId, friendshipId }
+            if (typeof updateFriendshipUI === 'function') {
+                updateFriendshipUI(data.fromUserId, data.status, data.friendshipId);
+            }
+        });
+        
+        async function performFriendshipAction(action, data, btn) {
+            if (btn) {
+                btn.disabled = true;
+                const originalContent = btn.innerHTML;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+                
+                try {
+                    const res = await fetch(`/Home/${action}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ ...data, __RequestVerificationToken: getToken() })
+                    });
+                    const result = await res.json();
+                    if (result.success) {
+                        if (typeof updateFriendshipUI === 'function') {
+                            // The 'data.targetUserId' might be 'userId' or 'targetUserId' depending on the action
+                            const targetId = data.targetUserId || data.userId || result.targetUserId; 
+                            updateFriendshipUI(targetId, result.status, result.friendshipId);
+                        } else {
+                            location.reload(); // Fallback
+                        }
+                    } else if (result.message) {
+                        showToast(result.message, 'bi-exclamation-triangle-fill');
+                        btn.innerHTML = originalContent;
+                        btn.disabled = false;
+                    }
+                } catch (err) {
+                    console.error(err);
+                    showToast('Action failed', 'bi-exclamation-octagon-fill');
+                    btn.innerHTML = originalContent;
+                    btn.disabled = false;
+                }
+            }
+        }
+
+        // ── Global DM listener (updates badge on any page) ──
+        let chatUnreadCount = 0;
+        function updateChatBadge(count) {
+            chatUnreadCount = count;
+            const badge = document.getElementById('chatBadge');
+            if (badge) {
+                badge.textContent = count > 99 ? '99+' : count;
+                badge.classList.toggle('visible', count > 0);
+                if (count > 0) {
+                    badge.style.animation = 'none';
+                    badge.offsetHeight;
+                    badge.style.animation = 'badgePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                }
+            }
+        }
+
+        connection.on('ReceiveDirectMessage', (data) => {
+            // Only show global toast if NOT on the chat page with this conversation open
+            const isOnChatPage = document.getElementById('chatContainer');
+            if (!isOnChatPage && data.senderId !== (document.body.dataset.userId || '')) {
+                showToast(`${data.senderName}: ${data.content.substring(0, 50)}`, 'bi-chat-square-dots-fill');
+                updateChatBadge(chatUnreadCount + 1);
+            }
+        });
+
+        // Fetch initial unread count
+        connection.start().then(() => {
+            fetch('/Chat/GetUnreadCount')
+                .then(r => r.json())
+                .then(d => updateChatBadge(d.count))
+                .catch(() => {});
+        }).catch(err => console.warn('SignalR connection failed:', err));
+
+        // ── Toggle Follow ──
+        async function toggleFollow(userId, btn) {
+            btn.style.transform = 'scale(0.95)';
+            setTimeout(() => btn.style.transform = 'scale(1)', 100);
+
+            const res = await fetch('/Home/ToggleFollow', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `userId=${userId}&__RequestVerificationToken=${getToken()}`
+            });
+            const data = await res.json();
+            
+            if (data.followed) {
+                btn.classList.add('unfollow');
+                btn.textContent = 'Unfollow';
+                showToast('User followed', 'bi-person-plus-fill');
+            } else {
+                btn.classList.remove('unfollow');
+                btn.textContent = 'Follow';
+                showToast('User unfollowed', 'bi-person-dash-fill');
+            }
+
+            // Update profile page follower/following counts if visible
+            const followerEl = document.getElementById('stat-followers');
+            const followingEl = document.getElementById('stat-following');
+            if (followerEl && data.followerCount !== undefined) followerEl.textContent = data.followerCount;
+            if (followingEl && data.followingCount !== undefined) followingEl.textContent = data.followingCount;
+        }
+
+        function sharePost(postId) {
+            const url = window.location.origin + '/Home/Profile/' + postId; 
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('Link copied to clipboard!', 'bi-link-45deg');
+            });
+        }
+
+        function showToast(msg, icon) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'modern-toast';
+            toast.innerHTML = `<i class="bi ${icon}"></i><span>${msg}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'toast-in 0.4s reverse forwards';
+                setTimeout(() => toast.remove(), 400);
+            }, 3000);
+        }
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
