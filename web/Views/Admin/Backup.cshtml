@@ -1,0 +1,146 @@
+@{
+    ViewData["Title"] = "Sao lưu dữ liệu";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    var backups = ViewBag.Backups as List<web.Controllers.BackupFileViewModel> ?? new List<web.Controllers.BackupFileViewModel>();
+}
+
+<div class="admin-page-header">
+    <div>
+        <h1 class="admin-title">Sao lưu dữ liệu (FR17)</h1>
+        <p class="admin-subtitle">Quản lý và sao lưu cơ sở dữ liệu của hệ thống Nexus</p>
+    </div>
+    <div class="header-meta">
+        <form method="post" action="/Admin/CreateBackup" style="display:inline-block;" onsubmit="showLoading()">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn-admin-primary" id="btnCreateBackup">
+                <i class="bi bi-cloud-arrow-up-fill"></i> Tạo bản sao lưu mới
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="admin-card">
+    <div class="dash-card-header">
+        <h3><i class="bi bi-database-fill-gear"></i> Danh sách các bản sao lưu (.bak)</h3>
+        <span class="count-chip">@backups.Count bản ghi</span>
+    </div>
+    
+    <div class="admin-table-wrap">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Tên tệp tin</th>
+                    <th>Dung lượng</th>
+                    <th>Thời gian tạo</th>
+                    <th style="text-align: right; padding-right: 1.5rem;">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!backups.Any())
+                {
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                            <i class="bi bi-shield-slash" style="font-size: 2.5rem; display: block; margin-bottom: 0.5rem; opacity: 0.4;"></i>
+                            Chưa có bản sao lưu nào được tạo. Hãy nhấn "Tạo bản sao lưu mới" phía trên.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var b in backups)
+                    {
+                        <tr>
+                            <td>
+                                <div class="user-cell">
+                                    <div class="avatar-placeholder-sm" style="background: linear-gradient(135deg, var(--blue), var(--purple)); display: flex; align-items: center; justify-content: center; color: #fff;">
+                                        <i class="bi bi-file-earmark-zip"></i>
+                                    </div>
+                                    <div>
+                                        <div class="user-name">@b.Filename</div>
+                                        <div class="user-email">Định dạng SQL Server Backup (.bak)</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                @{
+                                    double sizeInMb = b.FileSize / 1024.0 / 1024.0;
+                                    string sizeText = sizeInMb >= 1.0 ? $"{sizeInMb:F2} MB" : $"{(b.FileSize / 1024.0):F2} KB";
+                                }
+                                <span class="count-chip">@sizeText</span>
+                            </td>
+                            <td>
+                                <span class="time-chip"><i class="bi bi-clock"></i> @b.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss")</span>
+                            </td>
+                            <td style="text-align: right; padding-right: 1.5rem;">
+                                <div class="action-group" style="justify-content: flex-end; display: flex; gap: 0.5rem;">
+                                    <a href="/Admin/DownloadBackup?filename=@b.Filename" class="btn-admin-ghost btn-sm" style="text-decoration:none;" title="Tải xuống">
+                                        <i class="bi bi-download"></i> Tải về
+                                    </a>
+                                    
+                                    <form method="post" action="/Admin/DeleteBackup" style="display:inline-block;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa bản sao lưu này không?');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="filename" value="@b.Filename" />
+                                        <button type="submit" class="btn-admin-danger btn-sm" title="Xóa bản sao lưu">
+                                            <i class="bi bi-trash3"></i> Xóa
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="dash-card" style="margin-top: 1.5rem; background: rgba(59, 130, 246, 0.03); border-color: rgba(59, 130, 246, 0.1);">
+    <div class="dash-card-header" style="border-bottom: 1px solid rgba(59, 130, 246, 0.1);">
+        <h4 style="color: var(--blue); font-weight: 600; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+            <i class="bi bi-info-circle-fill"></i> Hướng dẫn Phục hồi Dữ liệu & Quy định Nghiệp vụ (BR06, BR07)
+        </h4>
+    </div>
+    <div style="padding: 1.2rem 1.5rem; font-size: 0.85rem; line-height: 1.6; color: var(--text-muted);">
+        <p style="margin-bottom: 0.8rem;">
+            Các bản sao lưu (.bak) được tạo bằng cơ chế trực tuyến <strong>T-SQL BACKUP DATABASE</strong> của SQL Server mà không khóa hay làm gián đoạn các kết nối CSDL hiện tại (không gây downtime).
+        </p>
+        <ul style="margin-left: 1.2rem; margin-bottom: 0.8rem; padding-left: 0;">
+            <li style="margin-bottom: 0.3rem;"><strong>Quy định nghiệp vụ (NFR06):</strong> Khuyến nghị sao lưu dữ liệu mỗi ngày một lần để đảm bảo an toàn cho dữ liệu người dùng, bài viết, và trò chuyện trực tuyến.</li>
+            <li style="margin-bottom: 0.3rem;"><strong>Đường dẫn lưu trữ:</strong> Các tệp tin được lưu vật lý trong thư mục <code style="color: var(--brand);">web/Databases/Backups/</code> của dự án.</li>
+            <li style="margin-bottom: 0.3rem;"><strong>Hướng dẫn phục hồi:</strong> Admin có thể sử dụng SQL Server Management Studio (SSMS) để phục hồi (Restore) trực tiếp từ các tệp này, hoặc sử dụng câu lệnh SQL: <br />
+                <code style="color: var(--brand); display: block; padding: 0.4rem; background: rgba(0,0,0,0.3); border-radius: 6px; margin: 0.4rem 0;">RESTORE DATABASE [WebSocialMediaDB] FROM DISK = 'đường_dẫn_tệp_sao_lưu.bak' WITH REPLACE;</code>
+            </li>
+        </ul>
+        <span style="color: var(--green);"><i class="bi bi-shield-check"></i> Chức năng này đạt tiêu chí nghiệm thu <strong>AC07 (Backup dữ liệu thành công)</strong> và yêu cầu phi chức năng <strong>NFR06</strong>.</span>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="toast-notification toast-success" id="toast">
+        <i class="bi bi-check-circle-fill"></i> @TempData["Success"]
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="toast-notification toast-error" id="toast">
+        <i class="bi bi-exclamation-circle-fill"></i> @TempData["Error"]
+    </div>
+}
+
+<script>
+function showLoading() {
+    const btn = document.getElementById('btnCreateBackup');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width:12px; height:12px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; display: inline-block; animation: spin 1s linear infinite; margin-right: 6px;"></span> Đang tạo bản sao lưu...';
+}
+// Auto-dismiss toast
+setTimeout(() => { const t = document.getElementById('toast'); if(t) t.style.opacity='0'; }, 4000);
+</script>
+
+<style>
+@@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>

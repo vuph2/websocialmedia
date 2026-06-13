@@ -282,5 +282,122 @@ namespace web.Controllers
             ResolvedAt     = r.ResolvedAt,
             ResolvedByName = r.ResolvedBy != null ? $"{r.ResolvedBy.FirstName} {r.ResolvedBy.LastName}".Trim() : null
         };
+
+        // GET /Admin/Backup
+        public IActionResult Backup()
+        {
+            var dbFolder = AppDomain.CurrentDomain.GetData("DataDirectory") as string;
+            var backupsList = new List<BackupFileViewModel>();
+
+            if (!string.IsNullOrEmpty(dbFolder))
+            {
+                var backupFolder = Path.Combine(dbFolder, "Backups");
+                if (Directory.Exists(backupFolder))
+                {
+                    var files = Directory.GetFiles(backupFolder, "*.bak");
+                    foreach (var file in files)
+                    {
+                        var info = new FileInfo(file);
+                        backupsList.Add(new BackupFileViewModel
+                        {
+                            Filename = info.Name,
+                            FileSize = info.Length,
+                            CreatedAt = info.CreationTime
+                        });
+                    }
+                }
+            }
+
+            ViewBag.Backups = backupsList.OrderByDescending(b => b.CreatedAt).ToList();
+            ViewBag.CurrentPage = "Backup";
+            return View();
+        }
+
+        // POST /Admin/CreateBackup
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateBackup()
+        {
+            var dbFolder = AppDomain.CurrentDomain.GetData("DataDirectory") as string;
+            if (string.IsNullOrEmpty(dbFolder))
+            {
+                TempData["Error"] = "Không thể định vị thư mục cơ sở dữ liệu.";
+                return RedirectToAction("Backup");
+            }
+
+            var backupFolder = Path.Combine(dbFolder, "Backups");
+            if (!Directory.Exists(backupFolder))
+            {
+                Directory.CreateDirectory(backupFolder);
+            }
+
+            var filename = $"WebSocialMediaDB_{DateTime.Now:yyyyMMdd_HHmmss}.bak";
+            var backupPath = Path.Combine(backupFolder, filename);
+
+            try
+            {
+                await _db.Database.ExecuteSqlRawAsync("BACKUP DATABASE [WebSocialMediaDB] TO DISK = {0} WITH FORMAT, INIT", backupPath);
+                TempData["Success"] = $"Sao lưu dữ liệu thành công! Đã tạo bản sao lưu: {filename}";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Lỗi sao lưu cơ sở dữ liệu: {ex.Message}";
+            }
+
+            return RedirectToAction("Backup");
+        }
+
+        // GET /Admin/DownloadBackup
+        public async Task<IActionResult> DownloadBackup(string filename)
+        {
+            if (string.IsNullOrEmpty(filename) || filename.Contains("..") || Path.GetExtension(filename).ToLower() != ".bak")
+            {
+                return BadRequest("Tên tệp không hợp lệ.");
+            }
+
+            var dbFolder = AppDomain.CurrentDomain.GetData("DataDirectory") as string;
+            if (string.IsNullOrEmpty(dbFolder)) return BadRequest();
+
+            var filePath = Path.Combine(dbFolder, "Backups", filename);
+            if (!System.IO.File.Exists(filePath))
+            {
+                return NotFound("Không tìm thấy tệp sao lưu.");
+            }
+
+            var bytes = await System.IO.File.ReadAllBytesAsync(filePath);
+            return File(bytes, "application/octet-stream", filename);
+        }
+
+        // POST /Admin/DeleteBackup
+        [HttpPost, ValidateAntiForgeryToken]
+        public IActionResult DeleteBackup(string filename)
+        {
+            if (string.IsNullOrEmpty(filename) || filename.Contains("..") || Path.GetExtension(filename).ToLower() != ".bak")
+            {
+                return BadRequest("Tên tệp không hợp lệ.");
+            }
+
+            var dbFolder = AppDomain.CurrentDomain.GetData("DataDirectory") as string;
+            if (string.IsNullOrEmpty(dbFolder)) return BadRequest();
+
+            var filePath = Path.Combine(dbFolder, "Backups", filename);
+            if (System.IO.File.Exists(filePath))
+            {
+                System.IO.File.Delete(filePath);
+                TempData["Success"] = $"Đã xóa bản sao lưu: {filename}";
+            }
+            else
+            {
+                TempData["Error"] = "Không tìm thấy tệp sao lưu.";
+            }
+
+            return RedirectToAction("Backup");
+        }
+    }
+
+    public class BackupFileViewModel
+    {
+        public string Filename { get; set; } = string.Empty;
+        public long FileSize { get; set; }
+        public DateTime CreatedAt { get; set; }
     }
 }
