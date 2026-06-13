@@ -290,3 +290,23 @@ CHỨC NĂNG 13: KHỞI TẠO CƠ SỞ DỮ LIỆU & ÁNH XẠ EF CORE (DATABASE
     ```
     EF Core sẽ tự động chuyển đổi các câu lệnh SQL tự sinh sử dụng tên bảng số ít (ví dụ: `SELECT * FROM Post`), trong khi lập trình viên vẫn có thể gọi các thuộc tính số nhiều trong mã nguồn (ví dụ: `_db.Posts.ToList()`), đảm bảo tính nhất quán tuyệt đối.
 ================================================================================
+CHỨC NĂNG 14: SAO LƯU DỮ LIỆU HỆ THỐNG (DATA BACKUP - FR17 & NFR06 & AC07)
+================================================================================
+- CÁCH HOẠT ĐỘNG (How it works):
+  * Quản trị viên (Admin) có giao diện chuyên biệt (/Admin/Backup) để quản lý các bản sao lưu cơ sở dữ liệu (.bak).
+  * Cho phép bấm "Tạo bản sao lưu mới" để tạo một tệp sao lưu tức thời.
+  * Hiển thị danh sách các tệp sao lưu đã tạo (Tên tệp, dung lượng file tính bằng KB/MB, và thời gian tạo tệp).
+  * Hỗ trợ tải trực tiếp tệp sao lưu về máy cá nhân (Download) hoặc xóa bản sao lưu (Delete) khỏi hệ thống.
+- NƠI HOẠT ĐỘNG (Where it works):
+  * Controller: web/Controllers/AdminController.cs (Các Action: Backup, CreateBackup, DownloadBackup, DeleteBackup)
+  * Views:
+    - web/Views/Admin/Backup.cshtml (Giao diện hiển thị, tạo và quản trị file backup)
+    - web/Views/Shared/_AdminLayout.cshtml (Thêm menu link "Sao lưu dữ liệu")
+  * Thư mục lưu trữ tệp vật lý: web/Databases/Backups/
+- TẠI SAO HOẠT ĐỘNG (Why it works):
+  * Việc sao lưu được thực hiện hoàn toàn trực tuyến và bất đồng bộ bằng cách chạy câu lệnh SQL gốc (T-SQL BACKUP DATABASE) qua Entity Framework Core DbContext:
+    `_db.Database.ExecuteSqlRawAsync("BACKUP DATABASE [WebSocialMediaDB] TO DISK = {0} WITH FORMAT, INIT", backupPath);`
+  * Câu lệnh này chỉ thị cho SQL Server tạo bản sao lưu vật lý sang file `.bak` mà không khóa hay làm gián đoạn bất kỳ kết nối CSDL nào khác (không gây downtime cho ứng dụng).
+  * Controller kiểm tra độ an toàn của tên tệp tải về để ngăn ngừa tấn công Directory Traversal (chỉ cho phép tệp đuôi `.bak` hợp lệ).
+  * Thư mục lưu trữ `Backups/` được phân tích động từ `DataDirectory` do SQL Server LocalDB chạy dưới tài khoản Windows người dùng hiện tại nên có toàn quyền ghi file.
+================================================================================
