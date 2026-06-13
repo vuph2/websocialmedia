@@ -24,9 +24,17 @@
         box-shadow: 0 10px 30px rgba(0,0,0,0.5); flex-shrink: 0;
     }
 
+    .profile-info {
+        flex: 1;
+        min-width: 0;
+    }
+
     .profile-info h1 {
         font-family: 'Syne', sans-serif; font-weight: 800; font-size: 2.5rem;
         margin: 0 0 0.2rem 0; letter-spacing: -1px;
+        word-wrap: break-word;
+        word-break: break-word;
+        overflow-wrap: break-word;
     }
 
     .profile-handle { color: var(--text-muted); font-size: 1.1rem; margin-bottom: 1.2rem; display: block; }
@@ -183,6 +191,19 @@
                         <i class="bi @(ViewBag.IsFollowing ? "bi-eye-slash" : "bi-eye")"></i>
                     </button>
                     <button class="btn-follow-lg unfollow" style="padding: 0.8rem 1.2rem;" onclick="location.href='/Chat/Index?userId=@Model.UserId'" title="Chat"><i class="bi bi-chat-dots"></i></button>
+
+                    @if (ViewBag.IsBlockedByMe == true)
+                    {
+                        <button class="btn-follow-lg unfollow" style="padding:0.8rem 1.2rem;border-color:rgba(239,68,68,0.4);color:#ef4444;" onclick="unblockUserAction('@Model.UserId')" title="Bỏ chặn">
+                            <i class="bi bi-slash-circle-fill"></i>
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn-follow-lg unfollow" style="padding:0.8rem 1.2rem;" onclick="blockUserAction('@Model.UserId')" title="Chặn người dùng">
+                            <i class="bi bi-slash-circle"></i>
+                        </button>
+                    }
                 }
                 else
                 {

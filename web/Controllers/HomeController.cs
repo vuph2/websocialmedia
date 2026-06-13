@@ -42,11 +42,18 @@ namespace web.Controllers
                     .Select(f => f.FollowedId)
                     .ToListAsync();
 
+                var blockedUserIds = await _db.BlockedUsers
+                    .Where(b => b.BlockerId == currentUserId || b.BlockedUserId == currentUserId)
+                    .Select(b => b.BlockerId == currentUserId ? b.BlockedUserId : b.BlockerId)
+                    .ToListAsync();
+
                 var activeStories = await _db.Stories
                     .Include(s => s.User)
                     .Include(s => s.StoryLikes).ThenInclude(l => l.User)
                     .Include(s => s.StoryViews).ThenInclude(v => v.User)
-                    .Where(s => s.ExpiresAt > DateTime.UtcNow && (s.UserId == currentUserId || followingIds.Contains(s.UserId)))
+                    .Where(s => s.ExpiresAt > DateTime.UtcNow 
+                             && !blockedUserIds.Contains(s.UserId)
+                             && (s.UserId == currentUserId || followingIds.Contains(s.UserId)))
                     .OrderByDescending(s => s.CreatedAt)
                     .ToListAsync();
 
@@ -91,9 +98,10 @@ namespace web.Controllers
                     .Include(p => p.Media)
                     .Include(p => p.Comments).ThenInclude(c => c.User)
                     .Include(p => p.PollOptions).ThenInclude(o => o.Votes)
-                    .Where(p => p.Privacy == "public" || 
-                                p.UserId == currentUserId || 
-                                (p.Privacy == "followers" && followingIds.Contains(p.UserId)))
+                    .Where(p => !blockedUserIds.Contains(p.UserId) &&
+                                (p.Privacy == "public" || 
+                                 p.UserId == currentUserId || 
+                                 (p.Privacy == "followers" && followingIds.Contains(p.UserId))))
                     .OrderByDescending(p => p.CreatedAt)
                     .Take(20)
                     .ToListAsync();
@@ -199,7 +207,8 @@ namespace web.Controllers
                 {
                     if (file.Length > 0)
                     {
-                        var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+                        var cleanFileName = Path.GetFileName(file.FileName).Replace(" ", "_");
+                        var fileName = $"{Guid.NewGuid()}_{cleanFileName}";
                         using var stream = new FileStream(Path.Combine(uploadsDir, fileName), FileMode.Create);
                         await file.CopyToAsync(stream);
                         
@@ -546,6 +555,12 @@ namespace web.Controllers
             if (user == null) return NotFound();
 
             var currentUserId = _userManager.GetUserId(User);
+
+            var isBlockedByTarget = await _db.BlockedUsers.AnyAsync(b => b.BlockerId == id && b.BlockedUserId == currentUserId);
+            if (isBlockedByTarget && !User.IsInRole("Admin") && !User.IsInRole("Moderator"))
+            {
+                return NotFound();
+            }
             
             var posts = await _db.Posts
                 .Include(p => p.User)
@@ -601,9 +616,10 @@ namespace web.Controllers
                 }).ToList()
             };
 
-            ViewBag.IsFollowing = _db.Follows.Any(f => f.FollowerId == currentUserId && f.FollowedId == id);
-            ViewBag.FollowerCount = user.Followers.Count;
+            ViewBag.IsFollowing   = _db.Follows.Any(f => f.FollowerId == currentUserId && f.FollowedId == id);
+            ViewBag.FollowerCount  = user.Followers.Count;
             ViewBag.FollowingCount = user.Following.Count;
+            ViewBag.IsBlockedByMe  = _db.BlockedUsers.Any(b => b.BlockerId == currentUserId && b.BlockedUserId == id);
 
             return View(vm);
         }
@@ -738,15 +754,23 @@ namespace web.Controllers
             if (string.IsNullOrWhiteSpace(query)) return RedirectToAction("Index");
 
             var queryLower = query.ToLower().Trim();
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var blockedUserIds = currentUserId != null
+                ? await _db.BlockedUsers
+                    .Where(b => b.BlockerId == currentUserId || b.BlockedUserId == currentUserId)
+                    .Select(b => b.BlockerId == currentUserId ? b.BlockedUserId : b.BlockerId)
+                    .ToListAsync()
+                : new List<string>();
 
             var users = await _userManager.Users
-                .Where(u => (u.FirstName + " " + u.LastName).ToLower().Contains(queryLower) 
-                         || u.UserName.ToLower().Contains(queryLower) 
-                         || u.Email.ToLower().Contains(queryLower))
+                .Where(u => !blockedUserIds.Contains(u.Id) &&
+                            ((u.FirstName + " " + u.LastName).ToLower().Contains(queryLower) 
+                          || u.UserName.ToLower().Contains(queryLower) 
+                          || u.Email.ToLower().Contains(queryLower)))
                 .Take(20)
                 .ToListAsync();
 
-            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var friendships = currentUserId != null 
                 ? await _db.Friendships.Where(f => f.RequesterId == currentUserId || f.ReceiverId == currentUserId).ToListAsync()
                 : new List<Friendship>();
@@ -881,6 +905,19 @@ namespace web.Controllers
             }
 
             return View(vm);
+        }
+
+        // ── POST /Home/MarkNotificationsRead ─────────────────────────
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> MarkNotificationsRead()
+        {
+            var currentUserId = _userManager.GetUserId(User);
+            var unread = await _db.Notifications
+                .Where(n => n.UserId == currentUserId && !n.IsRead)
+                .ToListAsync();
+            foreach (var n in unread) n.IsRead = true;
+            if (unread.Any()) await _db.SaveChangesAsync();
+            return Ok();
         }
 
         // ── POST /Home/CreateStory ────────────────────────────────────
@@ -1278,6 +1315,71 @@ namespace web.Controllers
             }
 
             return View(model);
+        }
+
+        // ── Report a Post (FR12) ──────────────────────────────────────
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ReportPost(int postId, string reason)
+        {
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var post = await _db.Posts.FindAsync(postId);
+            if (post == null) return Json(new { success = false, message = "Bài viết không tồn tại." });
+
+            // Prevent duplicate reports from same user
+            var existing = await _db.Reports
+                .AnyAsync(r => r.ReporterId == currentUserId && r.TargetPostId == postId && r.Status == "Pending");
+            if (existing)
+                return Json(new { success = false, message = "Bạn đã báo cáo bài viết này rồi." });
+
+            _db.Reports.Add(new Report
+            {
+                ReporterId  = currentUserId,
+                TargetPostId = postId,
+                TargetUserId = post.UserId,
+                Reason      = reason,
+                Status      = "Pending",
+                CreatedAt   = DateTime.UtcNow
+            });
+            await _db.SaveChangesAsync();
+            return Json(new { success = true, message = "Báo cáo đã được gửi. Cảm ơn bạn!" });
+        }
+
+        // ── Block User (BR04) ─────────────────────────────────────────
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> BlockUser(string userId)
+        {
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            if (userId == currentUserId)
+                return Json(new { success = false, message = "Không thể tự chặn bản thân." });
+
+            var already = await _db.BlockedUsers
+                .AnyAsync(b => b.BlockerId == currentUserId && b.BlockedUserId == userId);
+            if (!already)
+            {
+                _db.BlockedUsers.Add(new BlockedUser
+                {
+                    BlockerId     = currentUserId,
+                    BlockedUserId = userId,
+                    CreatedAt     = DateTime.UtcNow
+                });
+                await _db.SaveChangesAsync();
+            }
+            return Json(new { success = true, message = "Đã chặn người dùng này." });
+        }
+
+        // ── Unblock User ──────────────────────────────────────────────
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> UnblockUser(string userId)
+        {
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var block = await _db.BlockedUsers
+                .FirstOrDefaultAsync(b => b.BlockerId == currentUserId && b.BlockedUserId == userId);
+            if (block != null)
+            {
+                _db.BlockedUsers.Remove(block);
+                await _db.SaveChangesAsync();
+            }
+            return Json(new { success = true, message = "Đã bỏ chặn người dùng này." });
         }
     }
 }

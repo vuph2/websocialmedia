@@ -70,6 +70,13 @@ namespace web.Hubs
             if (string.IsNullOrEmpty(senderId) || (string.IsNullOrEmpty(content?.Trim()) && string.IsNullOrEmpty(mediaUrl)))
                 return;
 
+            // Prevent messages if either party has blocked the other
+            var isBlocked = await _db.BlockedUsers.AnyAsync(b =>
+                (b.BlockerId == senderId && b.BlockedUserId == recipientId) ||
+                (b.BlockerId == recipientId && b.BlockedUserId == senderId));
+            if (isBlocked)
+                return;
+
             content = content?.Trim() ?? string.Empty;
             if (content.Length > 2000) content = content[..2000];
 

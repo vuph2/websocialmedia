@@ -1,0 +1,226 @@
+@model List<web.Models.AdminUserViewModel>
+@{
+    ViewData["Title"] = "Quản lý người dùng";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    int currentPage = ViewBag.CurrentPage ?? 1;
+    int totalPages = ViewBag.TotalPages ?? 1;
+    string? filter = ViewBag.Filter;
+    string? search = ViewBag.Search;
+}
+
+<div class="admin-page-header">
+    <div>
+        <h1 class="admin-title">Quản lý người dùng</h1>
+        <p class="admin-subtitle">@ViewBag.TotalUsers tài khoản trong hệ thống</p>
+    </div>
+</div>
+
+<!-- Search & Filter Bar -->
+<div class="filter-bar">
+    <form method="get" action="/Admin/Users" class="search-form-admin">
+        <div class="search-input-wrap">
+            <i class="bi bi-search"></i>
+            <input type="text" name="search" value="@search" placeholder="Tìm theo tên, email, username..." class="admin-search-input" />
+        </div>
+        <select name="filter" class="admin-filter-select">
+            <option value="">Tất cả</option>
+            <option value="blocked" selected="@(filter == "blocked")">Bị khóa</option>
+        </select>
+        <button type="submit" class="btn-admin-primary">Tìm kiếm</button>
+        @if (!string.IsNullOrEmpty(search) || !string.IsNullOrEmpty(filter))
+        {
+            <a href="/Admin/Users" class="btn-admin-ghost">Xóa lọc</a>
+        }
+    </form>
+</div>
+
+<!-- Users Table -->
+<div class="admin-card">
+    <div class="admin-table-wrap">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Người dùng</th>
+                    <th>Username</th>
+                    <th>Vai trò</th>
+                    <th>Bài viết</th>
+                    <th>Bị báo cáo</th>
+                    <th>Ngày tham gia</th>
+                    <th>Trạng thái</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var u in Model)
+                {
+                    <tr class="@(u.IsBlocked ? "row-blocked" : "")">
+                        <td>
+                            <div class="user-cell">
+                                @if (!string.IsNullOrEmpty(u.Avatar))
+                                {
+                                    <img src="@u.Avatar" class="user-avatar-sm" alt="@u.FullName" />
+                                }
+                                else
+                                {
+                                    <div class="avatar-placeholder-sm">@(u.FullName.Length > 0 ? u.FullName[0] : 'U')</div>
+                                }
+                                <div>
+                                    <div class="user-name">@u.FullName</div>
+                                    <div class="user-email">@u.Email</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="username-chip">@@@u.Username</span></td>
+                        <td>
+                            @foreach (var r in u.Roles)
+                            {
+                                <span class="role-badge role-@r.ToLower()">@r</span>
+                            }
+                            @if (!u.Roles.Any()) { <span class="role-badge role-user">User</span> }
+                        </td>
+                        <td><span class="count-chip">@u.PostCount</span></td>
+                        <td>
+                            @if (u.ReportCount > 0)
+                            {
+                                <span class="count-chip count-red">@u.ReportCount</span>
+                            }
+                            else
+                            {
+                                <span class="count-chip">0</span>
+                            }
+                        </td>
+                        <td class="text-muted-sm">@u.CreatedAt.ToString("dd/MM/yyyy")</td>
+                        <td>
+                            @if (u.IsBlocked)
+                            {
+                                <span class="status-chip status-blocked" title="@u.BlockedReason">Bị khóa</span>
+                            }
+                            else
+                            {
+                                <span class="status-chip status-active">Hoạt động</span>
+                            }
+                        </td>
+                        <td>
+                            <div class="action-group">
+                                @if (u.IsBlocked)
+                                {
+                                    <form method="post" action="/Admin/UnblockUser" style="display:inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="userId" value="@u.Id" />
+                                        <button type="submit" class="btn-action btn-unblock" title="Mở khóa tài khoản">
+                                            <i class="bi bi-unlock-fill"></i>
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <button class="btn-action btn-block" title="Khóa tài khoản"
+                                            onclick="openBlockModal('@u.Id', '@u.FullName.Replace("'", "\\'")' )">
+                                        <i class="bi bi-lock-fill"></i>
+                                    </button>
+                                }
+
+                                <!-- Change Role -->
+                                <div class="dropdown-wrap" style="display:inline-block;position:relative">
+                                    <button class="btn-action btn-role" title="Đổi vai trò"
+                                            onclick="toggleRoleMenu(this)">
+                                        <i class="bi bi-person-badge-fill"></i>
+                                    </button>
+                                    <div class="role-dropdown hidden">
+                                        <form method="post" action="/Admin/ChangeRole">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="userId" value="@u.Id" />
+                                            <button type="submit" name="newRole" value="User" class="role-option">User</button>
+                                            <button type="submit" name="newRole" value="Moderator" class="role-option">Moderator</button>
+                                            <button type="submit" name="newRole" value="Admin" class="role-option">Admin</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    @if (totalPages > 1)
+    {
+        <div class="admin-pagination">
+            @for (int i = 1; i <= totalPages; i++)
+            {
+                <a href="/Admin/Users?page=@i&search=@search&filter=@filter"
+                   class="page-btn @(i == currentPage ? "page-btn-active" : "")">@i</a>
+            }
+        </div>
+    }
+</div>
+
+<!-- Block Modal -->
+<div id="blockModal" class="modal-overlay hidden">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3><i class="bi bi-lock-fill"></i> Khóa tài khoản</h3>
+            <button onclick="closeBlockModal()" class="modal-close"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="modal-body">
+            <p id="blockUserName" class="modal-user-info"></p>
+            <label class="modal-label">Lý do khóa tài khoản</label>
+            <form method="post" action="/Admin/BlockUser" id="blockForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="userId" id="blockUserId" />
+                <select name="reason" class="admin-filter-select" style="width:100%;margin-bottom:1rem" required>
+                    <option value="">-- Chọn lý do --</option>
+                    <option value="Vi phạm chính sách cộng đồng">Vi phạm chính sách cộng đồng</option>
+                    <option value="Đăng nội dung không phù hợp">Đăng nội dung không phù hợp</option>
+                    <option value="Spam, quảng cáo trái phép">Spam, quảng cáo trái phép</option>
+                    <option value="Tài khoản giả mạo">Tài khoản giả mạo</option>
+                    <option value="Quấy rối người dùng khác">Quấy rối người dùng khác</option>
+                </select>
+                <div class="modal-actions">
+                    <button type="button" onclick="closeBlockModal()" class="btn-admin-ghost">Hủy</button>
+                    <button type="submit" class="btn-admin-danger">Khóa tài khoản</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="toast-notification toast-success" id="toast">
+        <i class="bi bi-check-circle-fill"></i> @TempData["Success"]
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="toast-notification toast-error" id="toast">
+        <i class="bi bi-exclamation-circle-fill"></i> @TempData["Error"]
+    </div>
+}
+
+<script>
+function openBlockModal(userId, userName) {
+    document.getElementById('blockUserId').value = userId;
+    document.getElementById('blockUserName').textContent = 'Bạn đang khóa tài khoản: ' + userName;
+    document.getElementById('blockModal').classList.remove('hidden');
+}
+function closeBlockModal() {
+    document.getElementById('blockModal').classList.add('hidden');
+}
+function toggleRoleMenu(btn) {
+    const menu = btn.nextElementSibling;
+    document.querySelectorAll('.role-dropdown').forEach(d => {
+        if (d !== menu) d.classList.add('hidden');
+    });
+    menu.classList.toggle('hidden');
+}
+document.addEventListener('click', e => {
+    if (!e.target.closest('.dropdown-wrap')) {
+        document.querySelectorAll('.role-dropdown').forEach(d => d.classList.add('hidden'));
+    }
+});
+// Auto-dismiss toast
+setTimeout(() => { const t = document.getElementById('toast'); if(t) t.style.opacity='0'; }, 3000);
+</script>

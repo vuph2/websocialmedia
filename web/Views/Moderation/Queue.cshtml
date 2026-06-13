@@ -1,0 +1,140 @@
+@model List<web.Models.ModerationQueueViewModel>
+@{
+    ViewData["Title"] = "Hàng đợi kiểm duyệt";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    string status = ViewBag.Status ?? "Pending";
+}
+
+<div class="admin-page-header">
+    <div>
+        <h1 class="admin-title">Kiểm duyệt nội dung</h1>
+        <p class="admin-subtitle">Xem xét và xử lý các báo cáo từ cộng đồng</p>
+    </div>
+</div>
+
+<!-- Status Tabs -->
+<div class="status-tabs">
+    <a href="/Moderation/Queue?status=Pending" class="status-tab @(status == "Pending" ? "active" : "")">
+        <i class="bi bi-clock-fill"></i> Chờ xử lý
+        @if ((int)(ViewBag.PendingCount ?? 0) > 0)
+        {
+            <span class="tab-badge">@ViewBag.PendingCount</span>
+        }
+    </a>
+    <a href="/Moderation/Queue?status=Resolved" class="status-tab @(status == "Resolved" ? "active" : "")">
+        <i class="bi bi-check-circle-fill"></i> Đã xử lý
+        <span class="tab-count">@ViewBag.ResolvedCount</span>
+    </a>
+    <a href="/Moderation/Queue?status=Dismissed" class="status-tab @(status == "Dismissed" ? "active" : "")">
+        <i class="bi bi-x-circle-fill"></i> Đã bác bỏ
+        <span class="tab-count">@ViewBag.DismissedCount</span>
+    </a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="empty-state-full">
+        <i class="bi bi-shield-check"></i>
+        <h3>@(status == "Pending" ? "Không có báo cáo chờ xử lý" : "Không có dữ liệu")</h3>
+        <p>@(status == "Pending" ? "Cộng đồng đang hoạt động tốt! 🎉" : "Chưa có báo cáo nào trong mục này.")</p>
+    </div>
+}
+else
+{
+    <div class="queue-list">
+        @foreach (var r in Model)
+        {
+            <div class="queue-item @(r.Status == "Pending" ? "queue-item-active" : "")">
+                <!-- Report Header -->
+                <div class="queue-item-header">
+                    <div class="queue-reporter">
+                        <i class="bi bi-person-circle"></i>
+                        <strong>@r.ReporterName</strong>
+                        <span class="queue-time">
+                            @(DateTime.UtcNow.Subtract(r.CreatedAt).TotalHours < 1
+                                ? $"{(int)DateTime.UtcNow.Subtract(r.CreatedAt).TotalMinutes} phút trước"
+                                : DateTime.UtcNow.Subtract(r.CreatedAt).TotalHours < 24
+                                    ? $"{(int)DateTime.UtcNow.Subtract(r.CreatedAt).TotalHours} giờ trước"
+                                    : r.CreatedAt.ToString("dd/MM/yyyy HH:mm"))
+                        </span>
+                    </div>
+                    <span class="status-chip status-@r.Status.ToLower()">@r.Status</span>
+                </div>
+
+                <!-- Reason -->
+                <div class="queue-reason">
+                    <i class="bi bi-flag-fill text-danger"></i>
+                    <strong>Lý do:</strong> @r.Reason
+                </div>
+
+                <!-- Reported Content -->
+                @if (!string.IsNullOrEmpty(r.PostContent))
+                {
+                    <div class="queue-content-box">
+                        <div class="queue-content-label">
+                            <i class="bi bi-file-earmark-text"></i>
+                            Bài viết của <strong>@r.PostAuthorName</strong>
+                        </div>
+                        <div class="queue-content-text">
+                            @r.PostContent
+                        </div>
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(r.TargetUserName))
+                {
+                    <div class="queue-content-box">
+                        <div class="queue-content-label">
+                            <i class="bi bi-person-fill"></i>
+                            Người dùng bị báo cáo: <strong>@r.TargetUserName</strong>
+                        </div>
+                    </div>
+                }
+
+                <!-- Resolved Info -->
+                @if (r.ResolvedAt.HasValue)
+                {
+                    <div class="queue-resolved">
+                        <i class="bi bi-check-circle"></i>
+                        Xử lý bởi <strong>@(r.ResolvedByName ?? "Admin")</strong> lúc @r.ResolvedAt.Value.ToString("dd/MM/yyyy HH:mm")
+                        @if (!string.IsNullOrEmpty(r.ModeratorNote))
+                        {
+                            <div class="queue-note">💬 @r.ModeratorNote</div>
+                        }
+                    </div>
+                }
+
+                <!-- Actions (only for pending) -->
+                @if (r.Status == "Pending")
+                {
+                    <div class="queue-actions">
+                        <form method="post" action="/Moderation/Process" class="queue-action-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="reportId" value="@r.ReportId" />
+                            <input type="text" name="note" placeholder="Ghi chú xử lý (tùy chọn)..." class="note-input" />
+                            <div class="queue-btns">
+                                <button type="submit" name="action" value="remove" class="btn-admin-danger"
+                                        onclick="return confirm('Bạn chắc chắn muốn xóa bài viết này?')">
+                                    <i class="bi bi-trash-fill"></i> Xóa bài vi phạm
+                                </button>
+                                <button type="submit" name="action" value="dismiss" class="btn-admin-ghost">
+                                    <i class="bi bi-x-circle"></i> Bác bỏ báo cáo
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="toast-notification toast-success" id="toast">
+        <i class="bi bi-check-circle-fill"></i> @TempData["Success"]
+    </div>
+}
+
+<script>
+setTimeout(() => { const t = document.getElementById('toast'); if(t) t.style.opacity='0'; }, 3500);
+</script>

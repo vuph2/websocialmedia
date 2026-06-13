@@ -23,9 +23,14 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(optio
 });
 
 // ── Database ──────────────────────────────────────────────────
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (connectionString != null && connectionString.Contains("|DataDirectory|"))
+{
+    connectionString = connectionString.Replace("|DataDirectory|", dataDirectory);
+}
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
+        connectionString,
         sqlOptions => sqlOptions.EnableRetryOnFailure(
             maxRetryCount: 5,
             maxRetryDelay: TimeSpan.FromSeconds(10),
@@ -88,12 +93,45 @@ builder.Services.AddHostedService<StoryCleanupService>();
 
 var app = builder.Build();
 
-// ── Auto-Migration (Development only) ──────────────────────────
+// ── Auto-Migration & Role Seeding (Development only) ─────────────
 if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     db.Database.Migrate();
+
+    // Seed Roles
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    string[] roles = ["Admin", "Moderator", "User"];
+    foreach (var role in roles)
+    {
+        if (!await roleManager.RoleExistsAsync(role))
+            await roleManager.CreateAsync(new IdentityRole(role));
+    }
+
+    // Seed default Admin account
+    var userManager2 = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    const string adminEmail = "admin@nexus.com";
+    var adminUser = await userManager2.FindByEmailAsync(adminEmail);
+    if (adminUser == null)
+    {
+        var admin = new ApplicationUser
+        {
+            UserName = "admin",
+            Email = adminEmail,
+            FirstName = "Admin",
+            LastName = "Nexus",
+            EmailConfirmed = true,
+            CreatedAt = DateTime.UtcNow
+        };
+        var result = await userManager2.CreateAsync(admin, "Admin@123456");
+        if (result.Succeeded)
+            await userManager2.AddToRoleAsync(admin, "Admin");
+    }
+    else if (!await userManager2.IsInRoleAsync(adminUser, "Admin"))
+    {
+        await userManager2.AddToRoleAsync(adminUser, "Admin");
+    }
 }
 
 if (!app.Environment.IsDevelopment())

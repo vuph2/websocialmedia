@@ -1,0 +1,130 @@
+================================================================================
+                    WEBSITE MẠNG XÃ HỘI (NEXUS) - SYSTEM DOCUMENTATION
+================================================================================
+
+This document details the system architecture, database design, authentication model,
+moderation logic, security features, and overall workflow of the social media web application.
+
+--------------------------------------------------------------------------------
+1. TECHNOLOGY STACK & STRUCTURE
+--------------------------------------------------------------------------------
+- Framework: ASP.NET Core MVC (Target Framework: .NET 10.0)
+- ORM: Entity Framework Core (EF Core) with SQL Server Provider
+- Database Engine: SQL Server Express LocalDB (instance: mssqllocaldb)
+- Real-Time Communication: ASP.NET Core SignalR
+- Frontend styling: Vanilla CSS with custom glassmorphism components
+- Icons: Bootstrap Icons
+
+--------------------------------------------------------------------------------
+2. DATABASE STRUCTURE & TABLES
+--------------------------------------------------------------------------------
+The database is renamed to "WebSocialMediaDB" and stored at:
+`d:\websocialmedia\web\Databases\WebSocialMediaDB.mdf`
+
+To align with modern clean database design, all database tables (including Identity
+defaults) are mapped to singular English names. 
+
+Table Name Mappings:
+- User Core Tables:
+  * Post             - Stores post captions, feelings, privacy, and creation metadata.
+  * PostLike         - Holds likes/reactions per post per user.
+  * Comment          - User comments on posts.
+  * PollOption       - Choices for poll posts.
+  * PollVote         - User votes on options.
+  * Follow           - Follower-following relationships.
+  * Conversation     - DM chat sessions between two users (lexically ordered IDs).
+  * ChatMessage      - Messages sent inside a Conversation (with text/file support).
+  * Notification     - Real-time user notifications.
+  * PostMedia        - Post attachments (both image/video media and document files).
+  * Friendship       - Friend requests and acceptances.
+  * Story            - Stories that automatically expire after 24 hours.
+  * StoryLike        - User reactions/likes on stories.
+  * StoryView        - Log of users who viewed a story (tracks viewer stats).
+  * Report           - Flagged posts or users with status and notes.
+  * BlockedUser      - Blocking records restricting user interactions.
+
+- ASP.NET Identity Tables:
+  * AspNetUser       - User profiles (extends IdentityUser, adds FirstName, Bio, IsBlocked, etc.).
+  * AspNetRole       - Access roles (Admin, Moderator, User).
+  * AspNetUserRole   - Role assignments.
+  * AspNetUserClaim  - User-specific claims.
+  * AspNetUserLogin  - External OAuth logins (like Google OAuth).
+  * AspNetRoleClaim  - Role permissions.
+  * AspNetUserToken  - User security tokens.
+
+--------------------------------------------------------------------------------
+3. ROLE SEEDING & AUTHENTICATION
+--------------------------------------------------------------------------------
+- Seeding Logic: Upon startup, the system checks and seeds default roles:
+  * Admin     : Full system control (Dashboard, User list, Moderation).
+  * Moderator : Access to violation reports queue and content deletion.
+  * User      : General social activities.
+- Default Admin Account:
+  * Username : admin
+  * Email    : admin@nexus.com
+  * Password : Admin@123456
+- Multi-Credential Login: Users can log in using either their Email or Username. 
+  The login processor looks up the account by Email first, falling back to Username.
+
+--------------------------------------------------------------------------------
+4. SYSTEM FEATURES & HOW THEY WORK
+--------------------------------------------------------------------------------
+- Posts & Polls:
+  * Users can publish Text, Polls, or Files.
+  * Poll options support real-time voting. Once a user votes, the option widths
+    animate to show percentages instantly using CSS variables and DOM replacement.
+- File Uploads of Any Type:
+  * The accept restriction has been removed. Users can upload any file type (PDF, ZIP, DOCX, TXT).
+  * Uploaded files are saved on disk with the original filename prefixed with a Guid.
+  * In the feed:
+    - Image and Video files render in a grid gallery. Videos support controls.
+    - Other file types (PDF, ZIP, etc.) render as clean, styled document cards
+      showing their extension, original filename, and a direct download button.
+- Stories:
+  * Expire in 24 hours.
+  * story-card dimensions are set strictly to portrait (110px x 180px) to prevent
+    horizontal stretching when playing landscape videos, utilizing CSS object-fit.
+  * Story viewer modal displays viewers and real-time reaction summaries.
+- Direct Messaging (Chats) & SignalR:
+  * Users can start direct chats. Messages support attachments.
+  * SignalR updates the chat message count/badges and notification counts in real time.
+
+--------------------------------------------------------------------------------
+5. SECURITY & BLOCKING MECHANICS
+--------------------------------------------------------------------------------
+Blocking creates a record in the `BlockedUser` table. It enforces:
+- Feed Filtering: Posts and stories of blocked users are filtered out of feeds.
+- Search restrictions: Blocked users do not appear in searches.
+- Direct Chat restrictions: You cannot open chat sessions or send messages to users who blocked you.
+- Profile view restrictions:
+  * Regular users get a 404 (NotFound) when trying to visit the profile of a user who blocked them.
+  * Admin / Moderator exemption: Users in the "Admin" or "Moderator" roles are exempted, allowing
+    them to open profiles for content audit or promotion even if blocked.
+
+--------------------------------------------------------------------------------
+6. ADMINISTRATIVE & MODERATION DASHBOARDS
+--------------------------------------------------------------------------------
+- Admin Dashboard (/Admin/Dashboard):
+  * Displays overall stats (Total Users, Posts, Comments, New registrations today).
+  * Displays lists of recent users and pending reports.
+- User Management (/Admin/Users):
+  * Search, view, and filter blocked users.
+  * Promotes/demotes user roles (Admin, Moderator, User).
+  * Blocks users (specifying a reason) or Unblocks them.
+- Violation Reports List (/Admin/Reports):
+  * Admin reports list for reviewing content. Allows deleting posts or dismissing reports.
+- Moderation Queue (/Moderation/Queue):
+  * Moderator dashboard for handling flagged posts.
+- Content Deletion Flow:
+  * When a post is deleted, a `Notification` is created for the author detailing
+    the policy violation. The notification is saved before the post is removed from
+    the DbContext tracker, preventing NullReferenceExceptions.
+
+--------------------------------------------------------------------------------
+7. TROUBLESHOOTING & DEVELOPMENT RUNNING
+--------------------------------------------------------------------------------
+- Local SDK Path: A local .NET SDK is placed under `C:\Users\len\.dotnet` to bypass
+  corrupt system paths.
+- Execution command:
+  cmd.exe /c "set PATH=C:\Users\len\.dotnet;%PATH% && set DOTNET_ROOT=C:\Users\len\.dotnet && dotnet run --launch-profile http"
+================================================================================

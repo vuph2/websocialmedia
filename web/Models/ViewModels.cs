@@ -265,4 +265,65 @@ namespace web.Models
         public List<FriendUserViewModel> Friends { get; set; } = new();
         public List<FriendUserViewModel> PendingRequests { get; set; } = new();
     }
+
+    // ── Report ──────────────────────────────────────────────────
+    public class ReportViewModel
+    {
+        [Required]
+        public int? PostId { get; set; }
+        public string? TargetUserId { get; set; }
+        [Required, MaxLength(500)]
+        public string Reason { get; set; } = string.Empty;
+    }
+
+    // ── Admin ──────────────────────────────────────────────────
+    public class AdminDashboardViewModel
+    {
+        public int TotalUsers { get; set; }
+        public int TotalPosts { get; set; }
+        public int TotalComments { get; set; }
+        public int TotalMessages { get; set; }
+        public int PendingReports { get; set; }
+        public int BlockedUsers { get; set; }
+        public int NewUsersToday { get; set; }
+        public int NewPostsToday { get; set; }
+        public List<AdminUserViewModel> RecentUsers { get; set; } = new();
+        public List<ModerationQueueViewModel> RecentReports { get; set; } = new();
+    }
+
+    public class AdminUserViewModel
+    {
+        public string Id { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? Username { get; set; }
+        public string? Avatar { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public bool IsBlocked { get; set; }
+        public string? BlockedReason { get; set; }
+        public DateTime? BlockedAt { get; set; }
+        public List<string> Roles { get; set; } = new();
+        public int PostCount { get; set; }
+        public int ReportCount { get; set; }
+    }
+
+    public class ModerationQueueViewModel
+    {
+        public int ReportId { get; set; }
+        public string ReporterName { get; set; } = string.Empty;
+        public string? ReporterAvatar { get; set; }
+        public string ReporterId { get; set; } = string.Empty;
+        public int? PostId { get; set; }
+        public string? PostContent { get; set; }
+        public string? PostAuthorName { get; set; }
+        public string? PostAuthorId { get; set; }
+        public string? TargetUserId { get; set; }
+        public string? TargetUserName { get; set; }
+        public string Reason { get; set; } = string.Empty;
+        public string Status { get; set; } = "Pending";
+        public string? ModeratorNote { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime? ResolvedAt { get; set; }
+        public string? ResolvedByName { get; set; }
+    }
 }

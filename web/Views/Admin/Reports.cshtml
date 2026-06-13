@@ -1,0 +1,133 @@
+@model List<web.Models.ModerationQueueViewModel>
+@{
+    ViewData["Title"] = "Quản lý báo cáo";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    string? statusFilter = ViewBag.Status;
+}
+
+<div class="admin-page-header">
+    <div>
+        <h1 class="admin-title">Báo cáo vi phạm</h1>
+        <p class="admin-subtitle">Quản lý tất cả báo cáo từ người dùng</p>
+    </div>
+</div>
+
+<!-- Status Tabs -->
+<div class="status-tabs">
+    <a href="/Admin/Reports" class="status-tab @(string.IsNullOrEmpty(statusFilter) ? "active" : "")">
+        Tất cả
+    </a>
+    <a href="/Admin/Reports?status=Pending" class="status-tab @(statusFilter == "Pending" ? "active" : "")">
+        <i class="bi bi-clock-fill"></i> Chờ xử lý
+        @if ((int)(ViewBag.PendingReports ?? 0) > 0)
+        {
+            <span class="tab-badge">@ViewBag.PendingReports</span>
+        }
+    </a>
+    <a href="/Admin/Reports?status=Resolved" class="status-tab @(statusFilter == "Resolved" ? "active" : "")">
+        <i class="bi bi-check-circle-fill"></i> Đã xử lý
+    </a>
+    <a href="/Admin/Reports?status=Dismissed" class="status-tab @(statusFilter == "Dismissed" ? "active" : "")">
+        <i class="bi bi-x-circle-fill"></i> Đã bác bỏ
+    </a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="empty-state-full">
+        <i class="bi bi-shield-check"></i>
+        <h3>Không có báo cáo</h3>
+        <p>Không tìm thấy báo cáo nào trong mục này.</p>
+    </div>
+}
+else
+{
+    <div class="reports-cards">
+        @foreach (var r in Model)
+        {
+            <div class="report-card @(r.Status == "Pending" ? "report-card-pending" : "")">
+                <div class="report-card-header">
+                    <div class="reporter-info">
+                        <span class="reporter-label">Người báo cáo:</span>
+                        <strong>@r.ReporterName</strong>
+                    </div>
+                    <div class="report-card-meta">
+                        <span class="status-chip status-@r.Status.ToLower()">@r.Status</span>
+                        <span class="time-chip">
+                            @(DateTime.UtcNow.Subtract(r.CreatedAt).TotalHours < 24
+                                ? $"{(int)DateTime.UtcNow.Subtract(r.CreatedAt).TotalHours}h trước"
+                                : r.CreatedAt.ToString("dd/MM/yyyy"))
+                        </span>
+                    </div>
+                </div>
+
+                <div class="report-card-body">
+                    <div class="report-reason-badge">
+                        <i class="bi bi-flag-fill"></i>
+                        <span>@r.Reason</span>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(r.PostContent))
+                    {
+                        <div class="reported-content">
+                            <div class="reported-content-label">
+                                <i class="bi bi-file-text"></i> Bài viết bị báo cáo
+                                <span class="author-name">của @r.PostAuthorName</span>
+                            </div>
+                            <div class="reported-content-text">
+                                @(r.PostContent.Length > 200 ? r.PostContent[..200] + "..." : r.PostContent)
+                            </div>
+                        </div>
+                    }
+
+                    @if (r.ResolvedAt.HasValue)
+                    {
+                        <div class="resolution-info">
+                            <i class="bi bi-person-check"></i>
+                            Xử lý bởi @(r.ResolvedByName ?? "Admin") • @r.ResolvedAt.Value.ToString("dd/MM/yyyy HH:mm")
+                            @if (!string.IsNullOrEmpty(r.ModeratorNote))
+                            {
+                                <div class="moderator-note">Ghi chú: @r.ModeratorNote</div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                @if (r.Status == "Pending")
+                {
+                    <div class="report-card-actions">
+                        <form method="post" action="/Admin/ResolveReport" class="inline-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="reportId" value="@r.ReportId" />
+                            <input type="hidden" name="action" value="remove" />
+                            <input type="text" name="note" placeholder="Ghi chú (tùy chọn)..." class="note-input" />
+                            <button type="submit" class="btn-admin-danger btn-sm"
+                                    onclick="return confirm('Xóa bài viết này?')">
+                                <i class="bi bi-trash-fill"></i> Xóa bài viết
+                            </button>
+                        </form>
+                        <form method="post" action="/Admin/ResolveReport" class="inline-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="reportId" value="@r.ReportId" />
+                            <input type="hidden" name="action" value="dismiss" />
+                            <button type="submit" class="btn-admin-ghost btn-sm">
+                                <i class="bi bi-x-circle"></i> Bác bỏ
+                            </button>
+                        </form>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="toast-notification toast-success" id="toast">
+        <i class="bi bi-check-circle-fill"></i> @TempData["Success"]
+    </div>
+}
+
+<script>
+setTimeout(() => { const t = document.getElementById('toast'); if(t) t.style.opacity='0'; }, 3000);
+</script>
