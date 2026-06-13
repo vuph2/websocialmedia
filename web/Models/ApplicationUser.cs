@@ -10,6 +10,11 @@ namespace web.Models
         public string? Bio { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        // Account suspension
+        public bool IsBlocked { get; set; } = false;
+        public DateTime? BlockedAt { get; set; }
+        public string? BlockedReason { get; set; }
+
         // Navigation
         public ICollection<Post> Posts { get; set; } = new List<Post>();
         public ICollection<PostLike> Likes { get; set; } = new List<PostLike>();
@@ -25,5 +30,9 @@ namespace web.Models
         public ICollection<Story> Stories { get; set; } = new List<Story>();
         public ICollection<StoryLike> StoryLikes { get; set; } = new List<StoryLike>();
         public ICollection<StoryView> StoryViews { get; set; } = new List<StoryView>();
+
+        // Block relationships
+        public ICollection<BlockedUser> BlockedByMe { get; set; } = new List<BlockedUser>();
+        public ICollection<BlockedUser> BlockedMe { get; set; } = new List<BlockedUser>();
     }
 }

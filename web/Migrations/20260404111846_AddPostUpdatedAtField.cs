@@ -12,11 +12,11 @@ namespace web.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             // 2026-04-04: Bypassed because the column already exists in the local database.
-            // migrationBuilder.AddColumn<DateTime>(
-            //     name: "UpdatedAt",
-            //     table: "Posts",
-            //     type: "datetime2",
-            //     nullable: true);
+            migrationBuilder.AddColumn<DateTime>(
+                name: "UpdatedAt",
+                table: "Posts",
+                type: "datetime2",
+                nullable: true);
         }
 
         /// <inheritdoc />

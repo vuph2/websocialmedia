@@ -1,48 +1,193 @@
 @model List<web.Models.NotificationViewModel>
 @{
-    ViewData["Title"] = "Notifications";
+    ViewData["Title"] = "Thông báo";
+
+    var today = Model.Where(n => (DateTime.UtcNow - n.CreatedAt).TotalHours < 24).ToList();
+    var older = Model.Where(n => (DateTime.UtcNow - n.CreatedAt).TotalHours >= 24).ToList();
+
+    string GetIconClass(string? type) => type switch
+    {
+        "like"       => "bi-heart-fill notif-icon-like",
+        "comment"    => "bi-chat-text-fill notif-icon-comment",
+        "follow"     => "bi-person-plus-fill notif-icon-follow",
+        "friend"     => "bi-people-fill notif-icon-friend",
+        "moderation" => "bi-shield-exclamation notif-icon-moderation",
+        _            => "bi-bell-fill notif-icon-default"
+    };
+
+    string GetWrapClass(string? type) => type switch
+    {
+        "like"       => "notif-icon-like",
+        "comment"    => "notif-icon-comment",
+        "follow"     => "notif-icon-follow",
+        "friend"     => "notif-icon-friend",
+        "moderation" => "notif-icon-moderation",
+        _            => "notif-icon-default"
+    };
+
+    string TimeAgo(DateTime dt)
+    {
+        var span = DateTime.UtcNow - dt;
+        if (span.TotalMinutes < 1) return "vừa xong";
+        if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes} phút trước";
+        if (span.TotalHours < 24) return $"{(int)span.TotalHours} giờ trước";
+        return $"{(int)span.TotalDays} ngày trước";
+    }
 }
 
-<div style="max-width: 800px; margin: 0 auto;">
-    <h2 style="font-family:'Syne',sans-serif;font-weight:800;margin-bottom:1.5rem;">Notifications</h2>
+<style>
+.notif-page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1.8rem;
+}
+.notif-title {
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.6rem;
+}
+.mark-read-btn {
+    background: rgba(255,77,109,0.1); border: 1px solid rgba(255,77,109,0.3);
+    color: var(--brand); padding: 0.5rem 1.2rem; border-radius: 12px;
+    font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    text-decoration: none; transition: all 0.2s;
+}
+.mark-read-btn:hover { background: rgba(255,77,109,0.2); color: var(--brand); }
 
-    @if (!Model.Any())
+.notif-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 20px; overflow: hidden; margin-bottom: 1.5rem;
+}
+.notif-group-label {
+    font-size: 0.75rem; font-weight: 700; color: var(--text-muted);
+    letter-spacing: 0.8px; text-transform: uppercase;
+    padding: 0.8rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+}
+.notif-item {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 1.1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    text-decoration: none;
+    transition: background 0.15s;
+    position: relative;
+}
+.notif-item:last-child { border-bottom: none; }
+.notif-item:hover { background: rgba(255,255,255,0.03); }
+.notif-item.unread { background: rgba(255,77,109,0.03); }
+
+.notif-icon-wrap {
+    width: 44px; height: 44px; border-radius: 13px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; flex-shrink: 0;
+}
+.notif-icon-like { background: rgba(255,77,109,0.12); color: #ff4d6d; }
+.notif-icon-comment { background: rgba(59,130,246,0.12); color: #3b82f6; }
+.notif-icon-follow { background: rgba(16,185,129,0.12); color: #10b981; }
+.notif-icon-friend { background: rgba(139,92,246,0.12); color: #8b5cf6; }
+.notif-icon-moderation { background: rgba(245,158,11,0.12); color: #f59e0b; }
+.notif-icon-default { background: rgba(255,255,255,0.06); color: #aaa; }
+
+.notif-content { flex: 1; min-width: 0; }
+.notif-text { color: #fff; font-size: 0.9rem; line-height: 1.4; }
+.notif-time { color: var(--text-muted); font-size: 0.78rem; margin-top: 3px; }
+.notif-dot {
+    width: 9px; height: 9px; background: var(--brand);
+    border-radius: 50%; flex-shrink: 0;
+    box-shadow: 0 0 8px var(--brand-glow);
+}
+
+.empty-notif {
+    text-align: center; padding: 5rem 2rem;
+    background: var(--card); border: 1px solid var(--border); border-radius: 24px;
+}
+.empty-notif i { font-size: 3.5rem; color: var(--text-muted); opacity: 0.3; display: block; margin-bottom: 1rem; }
+.empty-notif p { color: var(--text-muted); }
+</style>
+
+<div class="notif-page-header">
+    <h1 class="notif-title">Thông báo</h1>
+    @if (Model.Any(n => !n.IsRead))
     {
-        <div class="glass-effect" style="padding:4rem; text-align:center; border-radius:24px;">
-            <i class="bi bi-bell-slash" style="font-size:3rem;color:var(--text-muted);opacity:0.5;display:block;margin-bottom:1rem;"></i>
-            <p style="color:var(--text-muted);">You don't have any notifications yet.</p>
-        </div>
+        <a href="#" onclick="markAllRead(event)" class="mark-read-btn">
+            <i class="bi bi-check2-all"></i> Đánh dấu tất cả đã đọc
+        </a>
     }
-    else
-    {
-        <div class="glass-effect" style="border-radius:24px;overflow:hidden;">
-            @foreach (var n in Model)
-            {
-                var icon = n.Type == "like" ? "bi-heart-fill text-danger" :
-                           n.Type == "comment" ? "bi-chat-text-fill text-primary" :
-                           n.Type == "follow" ? "bi-person-plus-fill text-success" : "bi-bell-fill text-warning";
-                           
-                var bg = n.IsRead ? "transparent" : "rgba(255, 77, 109, 0.05)";
+</div>
 
-                <a href="@(string.IsNullOrEmpty(n.RelatedUrl) ? "#" : n.RelatedUrl)" style="display:block;text-decoration:none;transition:var(--transition);background:@bg;border-bottom:1px solid var(--border);">
-                    <div style="padding:1.2rem 1.5rem;display:flex;align-items:center;gap:1.2rem;">
-                        <div style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">
-                            <i class="bi @icon"></i>
-                        </div>
-                        <div style="flex:1;min-width:0;">
-                            <div style="color:#fff;font-weight:600;font-size:0.95rem;margin-bottom:0.2rem;">@n.Content</div>
-                            <div style="color:var(--text-muted);font-size:0.8rem;">
-                                @(DateTime.UtcNow.Subtract(n.CreatedAt).TotalMinutes < 60 
-                                    ? $"{(int)Math.Max(1, DateTime.UtcNow.Subtract(n.CreatedAt).TotalMinutes)}m ago" 
-                                    : $"{(int)Math.Max(1, DateTime.UtcNow.Subtract(n.CreatedAt).TotalHours)}h ago")
-                            </div>
-                        </div>
-                        @if (!n.IsRead) {
-                            <div style="width:10px;height:10px;background:var(--brand);border-radius:50%;box-shadow:0 0 10px var(--brand-glow);"></div>
-                        }
+@if (!Model.Any())
+{
+    <div class="empty-notif">
+        <i class="bi bi-bell-slash"></i>
+        <p>Chưa có thông báo nào.</p>
+    </div>
+}
+else
+{
+    @if (today.Any())
+    {
+        <div class="notif-card">
+            <div class="notif-group-label">Hôm nay</div>
+            @foreach (var n in today)
+            {
+                <a href="@(string.IsNullOrEmpty(n.RelatedUrl) ? "#" : n.RelatedUrl)"
+                   class="notif-item @(!n.IsRead ? "unread" : "")">
+                    <div class="notif-icon-wrap @GetWrapClass(n.Type)">
+                        <i class="bi @GetIconClass(n.Type)"></i>
                     </div>
+                    <div class="notif-content">
+                        <div class="notif-text">@n.Content</div>
+                        <div class="notif-time">@TimeAgo(n.CreatedAt)</div>
+                    </div>
+                    @if (!n.IsRead)
+                    {
+                        <div class="notif-dot"></div>
+                    }
                 </a>
             }
         </div>
     }
-</div>
+
+    @if (older.Any())
+    {
+        <div class="notif-card">
+            <div class="notif-group-label">Trước đó</div>
+            @foreach (var n in older)
+            {
+                <a href="@(string.IsNullOrEmpty(n.RelatedUrl) ? "#" : n.RelatedUrl)"
+                   class="notif-item @(!n.IsRead ? "unread" : "")">
+                    <div class="notif-icon-wrap @GetWrapClass(n.Type)">
+                        <i class="bi @GetIconClass(n.Type)"></i>
+                    </div>
+                    <div class="notif-content">
+                        <div class="notif-text">@n.Content</div>
+                        <div class="notif-time">@TimeAgo(n.CreatedAt)</div>
+                    </div>
+                    @if (!n.IsRead)
+                    {
+                        <div class="notif-dot"></div>
+                    }
+                </a>
+            }
+        </div>
+    }
+}
+
+@section Scripts {
+<script>
+async function markAllRead(e) {
+    e.preventDefault();
+    // Mark all read via a simple fetch (server side clears unread)
+    await fetch('/Home/MarkNotificationsRead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: '__RequestVerificationToken=' + document.querySelector('input[name="__RequestVerificationToken"]')?.value
+    });
+    // Remove all unread dots + unread class
+    document.querySelectorAll('.notif-dot').forEach(d => d.remove());
+    document.querySelectorAll('.notif-item.unread').forEach(i => i.classList.remove('unread'));
+    document.querySelector('.mark-read-btn')?.remove();
+    // Reset the notification badge in navbar
+    const badge = document.getElementById('notifBadge');
+    if (badge) { badge.textContent = '0'; badge.classList.remove('visible'); }
+}
+</script>
+}

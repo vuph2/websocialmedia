@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using web.Models;
 
 namespace web.Data
@@ -7,7 +8,33 @@ namespace web.Data
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-            : base(options) { }
+            : base(options)
+        {
+            var currentDir = System.IO.Directory.GetCurrentDirectory();
+            var dir = new System.IO.DirectoryInfo(currentDir);
+            string? dataDir = null;
+            while (dir != null)
+            {
+                var candidate = System.IO.Path.Combine(dir.FullName, "Databases");
+                if (System.IO.Directory.Exists(candidate))
+                {
+                    dataDir = candidate;
+                    break;
+                }
+                var candidateWeb = System.IO.Path.Combine(dir.FullName, "web", "Databases");
+                if (System.IO.Directory.Exists(candidateWeb))
+                {
+                    dataDir = candidateWeb;
+                    break;
+                }
+                dir = dir.Parent;
+            }
+
+            if (dataDir != null)
+            {
+                AppDomain.CurrentDomain.SetData("DataDirectory", dataDir);
+            }
+        }
 
         public DbSet<Post> Posts { get; set; }
         public DbSet<PostLike> PostLikes { get; set; }
@@ -25,9 +52,40 @@ namespace web.Data
         public DbSet<StoryLike> StoryLikes { get; set; }
         public DbSet<StoryView> StoryViews { get; set; }
 
+        // New tables for moderation & blocking
+        public DbSet<Report> Reports { get; set; }
+        public DbSet<BlockedUser> BlockedUsers { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            // Singular Table Mappings
+            builder.Entity<Post>().ToTable("Post");
+            builder.Entity<PostLike>().ToTable("PostLike");
+            builder.Entity<Comment>().ToTable("Comment");
+            builder.Entity<PollOption>().ToTable("PollOption");
+            builder.Entity<PollVote>().ToTable("PollVote");
+            builder.Entity<Follow>().ToTable("Follow");
+            builder.Entity<Conversation>().ToTable("Conversation");
+            builder.Entity<ChatMessage>().ToTable("ChatMessage");
+            builder.Entity<Notification>().ToTable("Notification");
+            builder.Entity<PostMedia>().ToTable("PostMedia");
+            builder.Entity<Friendship>().ToTable("Friendship");
+            builder.Entity<Story>().ToTable("Story");
+            builder.Entity<StoryLike>().ToTable("StoryLike");
+            builder.Entity<StoryView>().ToTable("StoryView");
+            builder.Entity<Report>().ToTable("Report");
+            builder.Entity<BlockedUser>().ToTable("BlockedUser");
+
+            // Identity Tables Singular Mappings
+            builder.Entity<ApplicationUser>().ToTable("AspNetUser");
+            builder.Entity<IdentityRole>().ToTable("AspNetRole");
+            builder.Entity<IdentityUserRole<string>>().ToTable("AspNetUserRole");
+            builder.Entity<IdentityUserClaim<string>>().ToTable("AspNetUserClaim");
+            builder.Entity<IdentityUserLogin<string>>().ToTable("AspNetUserLogin");
+            builder.Entity<IdentityRoleClaim<string>>().ToTable("AspNetRoleClaim");
+            builder.Entity<IdentityUserToken<string>>().ToTable("AspNetUserToken");
 
             // Unique like per user per post
             builder.Entity<PostLike>()
@@ -174,6 +232,48 @@ namespace web.Data
                 .HasOne(s => s.User)
                 .WithMany(u => u.StoryViews)
                 .HasForeignKey(s => s.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // ── Reports ─────────────────────────────────────────────────
+            builder.Entity<Report>()
+                .HasOne(r => r.Reporter)
+                .WithMany()
+                .HasForeignKey(r => r.ReporterId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<Report>()
+                .HasOne(r => r.TargetPost)
+                .WithMany()
+                .HasForeignKey(r => r.TargetPostId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<Report>()
+                .HasOne(r => r.TargetUser)
+                .WithMany()
+                .HasForeignKey(r => r.TargetUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<Report>()
+                .HasOne(r => r.ResolvedBy)
+                .WithMany()
+                .HasForeignKey(r => r.ResolvedById)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // ── BlockedUsers ─────────────────────────────────────────────
+            builder.Entity<BlockedUser>()
+                .HasIndex(b => new { b.BlockerId, b.BlockedUserId })
+                .IsUnique();
+
+            builder.Entity<BlockedUser>()
+                .HasOne(b => b.Blocker)
+                .WithMany(u => u.BlockedByMe)
+                .HasForeignKey(b => b.BlockerId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<BlockedUser>()
+                .HasOne(b => b.Blocked)
+                .WithMany(u => u.BlockedMe)
+                .HasForeignKey(b => b.BlockedUserId)
                 .OnDelete(DeleteBehavior.NoAction);
         }
     }

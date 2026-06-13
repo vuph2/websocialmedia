@@ -46,7 +46,7 @@ namespace web.Migrations
                         .HasDatabaseName("RoleNameIndex")
                         .HasFilter("[NormalizedName] IS NOT NULL");
 
-                    b.ToTable("AspNetRoles", (string)null);
+                    b.ToTable("AspNetRole", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -71,7 +71,7 @@ namespace web.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetRoleClaims", (string)null);
+                    b.ToTable("AspNetRoleClaim", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
@@ -96,7 +96,7 @@ namespace web.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserClaims", (string)null);
+                    b.ToTable("AspNetUserClaim", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
@@ -118,7 +118,7 @@ namespace web.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserLogins", (string)null);
+                    b.ToTable("AspNetUserLogin", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
@@ -133,7 +133,7 @@ namespace web.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetUserRoles", (string)null);
+                    b.ToTable("AspNetUserRole", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
@@ -152,7 +152,7 @@ namespace web.Migrations
 
                     b.HasKey("UserId", "LoginProvider", "Name");
 
-                    b.ToTable("AspNetUserTokens", (string)null);
+                    b.ToTable("AspNetUserToken", (string)null);
                 });
 
             modelBuilder.Entity("web.Models.ApplicationUser", b =>
@@ -164,6 +164,12 @@ namespace web.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Bio")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("BlockedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("BlockedReason")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ConcurrencyStamp")
@@ -183,6 +189,9 @@ namespace web.Migrations
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsBlocked")
+                        .HasColumnType("bit");
 
                     b.Property<string>("LastName")
                         .IsRequired()
@@ -234,7 +243,36 @@ namespace web.Migrations
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
-                    b.ToTable("AspNetUsers", (string)null);
+                    b.ToTable("AspNetUser", (string)null);
+                });
+
+            modelBuilder.Entity("web.Models.BlockedUser", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BlockedUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("BlockerId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BlockedUserId");
+
+                    b.HasIndex("BlockerId", "BlockedUserId")
+                        .IsUnique();
+
+                    b.ToTable("BlockedUser", (string)null);
                 });
 
             modelBuilder.Entity("web.Models.ChatMessage", b =>
@@ -274,7 +312,7 @@ namespace web.Migrations
 
                     b.HasIndex("SenderId");
 
-                    b.ToTable("ChatMessages");
+                    b.ToTable("ChatMessage", (string)null);
                 });
 
             modelBuilder.Entity("web.Models.Comment", b =>
@@ -305,7 +343,7 @@ namespace web.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Comments");
+                    b.ToTable("Comment", (string)null);
                 });
 
             modelBuilder.Entity("web.Models.Conversation", b =>
@@ -337,7 +375,7 @@ namespace web.Migrations
                     b.HasIndex("User1Id", "User2Id")
                         .IsUnique();
 
-                    b.ToTable("Conversations");
+                    b.ToTable("Conversation", (string)null);
                 });
 
             modelBuilder.Entity("web.Models.Follow", b =>
@@ -366,7 +404,7 @@ namespace web.Migrations
                     b.HasIndex("FollowerId", "FollowedId")
                         .IsUnique();
 
-                    b.ToTable("Follows");
+                    b.ToTable("Follow", (string)null);
                 });
 
             modelBuilder.Entity("web.Models.Friendship", b =>
@@ -402,7 +440,7 @@ namespace web.Migrations
                     b.HasIndex("RequesterId", "ReceiverId")
                         .IsUnique();
 
-                    b.ToTable("Friendships");
+                    b.ToTable("Friendship", (string)null);
                 });
 
             modelBuilder.Entity("web.Models.Notification", b =>
@@ -437,7 +475,7 @@ namespace web.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Notifications");
+                    b.ToTable("Notification", (string)null);
                 });
 
             modelBuilder.Entity("web.Models.PollOption", b =>
@@ -459,7 +497,7 @@ namespace web.Migrations
 
                     b.HasIndex("PostId");
 
-                    b.ToTable("PollOptions");
+                    b.ToTable("PollOption", (string)null);
                 });
 
             modelBuilder.Entity("web.Models.PollVote", b =>
@@ -484,7 +522,7 @@ namespace web.Migrations
                     b.HasIndex("PollOptionId", "UserId")
                         .IsUnique();
 
-                    b.ToTable("PollVotes");
+                    b.ToTable("PollVote", (string)null);
                 });
 
             modelBuilder.Entity("web.Models.Post", b =>
@@ -527,7 +565,7 @@ namespace web.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Posts");
+                    b.ToTable("Post", (string)null);
                 });
 
             modelBuilder.Entity("web.Models.PostLike", b =>
@@ -559,7 +597,7 @@ namespace web.Migrations
                     b.HasIndex("PostId", "UserId")
                         .IsUnique();
 
-                    b.ToTable("PostLikes");
+                    b.ToTable("PostLike", (string)null);
                 });
 
             modelBuilder.Entity("web.Models.PostMedia", b =>
@@ -581,7 +619,59 @@ namespace web.Migrations
 
                     b.HasIndex("PostId");
 
-                    b.ToTable("PostMedia");
+                    b.ToTable("PostMedia", (string)null);
+                });
+
+            modelBuilder.Entity("web.Models.Report", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModeratorNote")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ReporterId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ResolvedById")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("TargetPostId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TargetUserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReporterId");
+
+                    b.HasIndex("ResolvedById");
+
+                    b.HasIndex("TargetPostId");
+
+                    b.HasIndex("TargetUserId");
+
+                    b.ToTable("Report", (string)null);
                 });
 
             modelBuilder.Entity("web.Models.Story", b =>
@@ -614,7 +704,7 @@ namespace web.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Stories");
+                    b.ToTable("Story", (string)null);
                 });
 
             modelBuilder.Entity("web.Models.StoryLike", b =>
@@ -646,7 +736,7 @@ namespace web.Migrations
                     b.HasIndex("StoryId", "UserId")
                         .IsUnique();
 
-                    b.ToTable("StoryLikes");
+                    b.ToTable("StoryLike", (string)null);
                 });
 
             modelBuilder.Entity("web.Models.StoryView", b =>
@@ -674,7 +764,7 @@ namespace web.Migrations
                     b.HasIndex("StoryId", "UserId")
                         .IsUnique();
 
-                    b.ToTable("StoryViews");
+                    b.ToTable("StoryView", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -726,6 +816,25 @@ namespace web.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("web.Models.BlockedUser", b =>
+                {
+                    b.HasOne("web.Models.ApplicationUser", "Blocked")
+                        .WithMany("BlockedMe")
+                        .HasForeignKey("BlockedUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("web.Models.ApplicationUser", "Blocker")
+                        .WithMany("BlockedByMe")
+                        .HasForeignKey("BlockerId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Blocked");
+
+                    b.Navigation("Blocker");
                 });
 
             modelBuilder.Entity("web.Models.ChatMessage", b =>
@@ -905,6 +1014,38 @@ namespace web.Migrations
                     b.Navigation("Post");
                 });
 
+            modelBuilder.Entity("web.Models.Report", b =>
+                {
+                    b.HasOne("web.Models.ApplicationUser", "Reporter")
+                        .WithMany()
+                        .HasForeignKey("ReporterId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("web.Models.ApplicationUser", "ResolvedBy")
+                        .WithMany()
+                        .HasForeignKey("ResolvedById")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("web.Models.Post", "TargetPost")
+                        .WithMany()
+                        .HasForeignKey("TargetPostId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("web.Models.ApplicationUser", "TargetUser")
+                        .WithMany()
+                        .HasForeignKey("TargetUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("Reporter");
+
+                    b.Navigation("ResolvedBy");
+
+                    b.Navigation("TargetPost");
+
+                    b.Navigation("TargetUser");
+                });
+
             modelBuilder.Entity("web.Models.Story", b =>
                 {
                     b.HasOne("web.Models.ApplicationUser", "User")
@@ -956,6 +1097,10 @@ namespace web.Migrations
 
             modelBuilder.Entity("web.Models.ApplicationUser", b =>
                 {
+                    b.Navigation("BlockedByMe");
+
+                    b.Navigation("BlockedMe");
+
                     b.Navigation("Comments");
 
                     b.Navigation("Followers");

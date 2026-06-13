@@ -92,7 +92,7 @@
     <!-- Stories Carousel -->
     <div class="stories-container glass-effect" style="display:flex; gap:12px; overflow-x:auto; padding:15px; margin-bottom:1.5rem; border-radius:24px;">
         <!-- Add Story Button -->
-        <div class="story-card" style="min-width:110px; height:180px; background:rgba(255,255,255,0.05); border:1px dashed var(--border); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; transition: transform 0.2s;" onclick="document.getElementById('storyInput').click()" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        <div class="story-card" style="width:110px; min-width:110px; height:180px; background:rgba(255,255,255,0.05); border:1px dashed var(--border); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; transition: transform 0.2s;" onclick="document.getElementById('storyInput').click()" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
             <div style="width:40px; height:40px; border-radius:50%; background:var(--brand); display:flex; align-items:center; justify-content:center; margin-bottom:8px;">
                 <i class="bi bi-plus-lg" style="font-size:1.2rem; color:#000;"></i>
             </div>
@@ -107,7 +107,7 @@
             foreach(var userStory in Model.UserStories) {
                 if(userStory.Stories.Any()) {
                     var firstStory = userStory.Stories.First();
-                    <div class="story-card" style="min-width:110px; height:180px; border-radius:18px; position:relative; overflow:hidden; cursor:pointer; border: 2px solid var(--brand); transition: transform 0.2s; background:#111;" onclick="openStoryViewer(@idx)" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                    <div class="story-card" style="width:110px; min-width:110px; height:180px; border-radius:18px; position:relative; overflow:hidden; cursor:pointer; border: 2px solid var(--brand); transition: transform 0.2s; background:#111;" onclick="openStoryViewer(@idx)" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                         @if (firstStory.MediaType == "video") {
                             <video src="@firstStory.MediaUrl" style="width:100%; height:100%; object-fit:cover; pointer-events:none;" muted loop onmouseover="this.play()" onmouseout="this.pause()"></video>
                             <div style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.5); border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:0.7rem;"><i class="bi bi-play-fill"></i></div>
@@ -143,7 +143,7 @@
             </a>
         </div>
         <div class="create-actions" style="display:flex; gap:0.8rem; padding-top:1rem; border-top:1px solid var(--border);">
-            <a href="@Url.Action("CreatePost","Home")?type=media" class="create-action-btn" style="text-decoration:none; color:var(--text-muted); font-size:0.85rem; font-weight:600;"><i class="bi bi-image" style="color:#4ade80;"></i> Photo</a>
+            <a href="@Url.Action("CreatePost","Home")?type=media" class="create-action-btn" style="text-decoration:none; color:var(--text-muted); font-size:0.85rem; font-weight:600;"><i class="bi bi-file-earmark-plus" style="color:#4ade80;"></i> File</a>
             <a href="@Url.Action("CreatePost","Home")?type=feeling" class="create-action-btn" style="text-decoration:none; color:var(--text-muted); font-size:0.85rem; font-weight:600;"><i class="bi bi-emoji-smile" style="color:#fbbf24;"></i> Feeling</a>
             <a href="@Url.Action("CreatePost","Home")?type=poll" class="create-action-btn" style="text-decoration:none; color:var(--text-muted); font-size:0.85rem; font-weight:600;"><i class="bi bi-bar-chart-line" style="color:#a78bfa;"></i> Poll</a>
         </div>

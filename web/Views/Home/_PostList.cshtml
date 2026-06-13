@@ -38,18 +38,69 @@
                     </div>
                 </div>
             }
+            else
+            {
+                <div style="position:relative;">
+                    <button class="post-menu-toggle" onclick="togglePostMenu(@post.Id)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;padding:.3rem .5rem;border-radius:8px;transition:all .2s;">
+                        <i class="bi bi-three-dots"></i>
+                    </button>
+                    <div id="post-menu-@post.Id" style="display:none;position:absolute;right:0;top:2.2rem;background:#1e1e2e;border:1px solid var(--border);border-radius:12px;padding:.4rem;min-width:160px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.4);">
+                        <button onclick="openReportModal(@post.Id);togglePostMenu(@post.Id);" style="display:flex;align-items:center;gap:.5rem;width:100%;background:none;border:none;color:#f59e0b;padding:.5rem .8rem;border-radius:8px;cursor:pointer;font-size:.87rem;text-align:left;">
+                            <i class="bi bi-flag-fill"></i> Báo cáo
+                        </button>
+                        <button onclick="blockUserAction('@post.AuthorId');togglePostMenu(@post.Id);" style="display:flex;align-items:center;gap:.5rem;width:100%;background:none;border:none;color:#ff8fa3;padding:.5rem .8rem;border-radius:8px;cursor:pointer;font-size:.87rem;text-align:left;">
+                            <i class="bi bi-slash-circle"></i> Chặn người dùng
+                        </button>
+                    </div>
+                </div>
+            }
         </div>
 
         @if (!string.IsNullOrEmpty(post.Content))
         { <div class="post-body" id="post-body-@post.Id">@web.Helpers.HtmlFormatter.FormatPostContent(post.Content)</div> }
 
-        @if (post.ImageUrls != null && post.ImageUrls.Any())
+        @{
+            var mediaExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg", ".mp4", ".webm", ".ogg", ".mov", ".avi" };
+            var videoExtensions = new[] { ".mp4", ".webm", ".ogg", ".mov", ".avi" };
+
+            var allUrls = new List<string>();
+            if (post.ImageUrls != null && post.ImageUrls.Any())
+            {
+                allUrls.AddRange(post.ImageUrls);
+            }
+            else if (!string.IsNullOrEmpty(post.ImageUrl))
+            {
+                allUrls.Add(post.ImageUrl);
+            }
+
+            var mediaUrls = allUrls.Where(url => {
+                var ext = System.IO.Path.GetExtension(url)?.ToLower();
+                return mediaExtensions.Contains(ext);
+            }).ToList();
+
+            var attachmentUrls = allUrls.Where(url => {
+                var ext = System.IO.Path.GetExtension(url)?.ToLower();
+                return !mediaExtensions.Contains(ext);
+            }).ToList();
+        }
+
+        @if (mediaUrls.Any())
         {
-            var count = post.ImageUrls.Count;
+            var count = mediaUrls.Count;
             if (count == 1)
             {
+                var url = mediaUrls[0];
+                var ext = System.IO.Path.GetExtension(url)?.ToLower();
+                var isVideo = videoExtensions.Contains(ext);
                 <div class="post-media-container">
-                    <img src="@post.ImageUrls[0]" class="post-image" onclick="window.open('@post.ImageUrls[0]','_blank')" alt=""/>
+                    @if (isVideo)
+                    {
+                        <video src="@url" controls class="post-image" style="max-height:500px; width:100%; object-fit:contain; background:#000; border-radius:16px;"></video>
+                    }
+                    else
+                    {
+                        <img src="@url" class="post-image" onclick="window.open('@url','_blank')" alt=""/>
+                    }
                 </div>
             }
             else
@@ -59,18 +110,60 @@
                     grid-auto-rows:@(count <= 2 ? "300px" : "220px");">
                     @for (int i = 0; i < count; i++)
                     {
+                        var url = mediaUrls[i];
+                        var ext = System.IO.Path.GetExtension(url)?.ToLower();
+                        var isVideo = videoExtensions.Contains(ext);
                         var st = (count == 3 && i == 0) ? "grid-column: span 2; height: 350px;" : "height: 100%;";
                         <div style="@st overflow:hidden; position:relative;">
-                            <img src="@post.ImageUrls[i]" class="post-gallery-img" onclick="window.open('@post.ImageUrls[i]','_blank')" alt=""/>
+                            @if (isVideo)
+                            {
+                                <video src="@url" controls style="width:100%; height:100%; object-fit:cover; background:#000;"></video>
+                            }
+                            else
+                            {
+                                <img src="@url" class="post-gallery-img" onclick="window.open('@url','_blank')" alt=""/>
+                            }
                         </div>
                     }
                 </div>
             }
         }
-        else if (!string.IsNullOrEmpty(post.ImageUrl))
+
+        @if (attachmentUrls.Any())
         {
-            <div class="post-media-container">
-                <img src="@post.ImageUrl" class="post-image" onclick="window.open('@post.ImageUrl','_blank')" alt=""/>
+            <div class="post-attachments-container" style="display:flex; flex-direction:column; gap:0.8rem; margin-top:1rem; margin-bottom:1rem;">
+                @foreach (var url in attachmentUrls)
+                {
+                    var fullFileName = System.IO.Path.GetFileName(url);
+                    var displayFileName = fullFileName;
+                    if (displayFileName.Contains("_"))
+                    {
+                        displayFileName = displayFileName.Substring(displayFileName.IndexOf('_') + 1);
+                    }
+                    var ext = System.IO.Path.GetExtension(url)?.ToLower();
+                    var fileIcon = "bi-file-earmark-fill";
+                    if (ext == ".pdf") fileIcon = "bi-file-earmark-pdf-fill";
+                    else if (ext == ".zip" || ext == ".rar" || ext == ".7z") fileIcon = "bi-file-earmark-zip-fill";
+                    else if (ext == ".docx" || ext == ".doc") fileIcon = "bi-file-earmark-word-fill";
+                    else if (ext == ".xlsx" || ext == ".xls") fileIcon = "bi-file-earmark-excel-fill";
+                    else if (ext == ".pptx" || ext == ".ppt") fileIcon = "bi-file-earmark-slides-fill";
+                    else if (ext == ".txt") fileIcon = "bi-file-earmark-text-fill";
+
+                    <div class="attachment-file-card">
+                        <a href="@url" download="@displayFileName" class="glass-effect" style="display:flex; align-items:center; gap:1rem; padding:0.8rem 1.2rem; border-radius:14px; border:1px solid var(--border); text-decoration:none; color:#fff; transition:var(--transition); background:rgba(255,255,255,0.02);">
+                            <div style="width:40px; height:40px; border-radius:10px; background:rgba(255,77,109,0.1); display:flex; align-items:center; justify-content:center; font-size:1.3rem; color:var(--brand); flex-shrink:0;">
+                                <i class="bi @fileIcon"></i>
+                            </div>
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-weight:600; font-size:0.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">@displayFileName</div>
+                                <div style="font-size:0.75rem; color:var(--text-muted);">Tải xuống tệp tin (@(ext?.TrimStart('.').ToUpper() ?? "FILE"))</div>
+                            </div>
+                            <div style="font-size:1.1rem; color:var(--text-muted); padding-right:0.3rem;">
+                                <i class="bi bi-download"></i>
+                            </div>
+                        </a>
+                    </div>
+                }
             </div>
         }
 
@@ -79,7 +172,7 @@
             <div class="poll-wrap" id="poll-@post.Id">
                 @foreach (var opt in post.PollOptions)
                 {
-                    <div class="poll-option @(post.HasVoted?"voted":"")" onclick="@(post.HasVoted?"":$"votePoll({opt.Id},{post.Id})")">
+                    <div class="poll-option @(post.HasVoted?"voted":"")" data-option-id="@opt.Id" onclick="@(post.HasVoted?"":$"votePoll({opt.Id},{post.Id})")">
                         <div class="poll-bar" style="width:@(post.HasVoted?opt.Percentage:0)%"></div>
                         <div class="poll-text">
                             <span>@opt.OptionText @(opt.VotedByCurrentUser?"✓":"")</span>

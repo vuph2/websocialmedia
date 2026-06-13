@@ -381,6 +381,20 @@
                 <a href="@Url.Action("Settings","Home")" class="nav-link-item @(ViewContext.RouteData.Values["action"]?.ToString() == "Settings" ? "active" : "")">
                     <i class="bi bi-gear"></i> <span>Settings</span>
                 </a>
+                @if (User.IsInRole("Admin") || User.IsInRole("Moderator"))
+                {
+                    <div style="border-top:1px solid var(--border);margin:.5rem 0;"></div>
+                    <div class="sidebar-title">Quản lý</div>
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <a href="/Admin/Dashboard" class="nav-link-item">
+                            <i class="bi bi-speedometer2"></i> <span>Admin Panel</span>
+                        </a>
+                    }
+                    <a href="/Moderation/Queue" class="nav-link-item">
+                        <i class="bi bi-shield-fill-check"></i> <span>Kiểm duyệt</span>
+                    </a>
+                }
                 <div style="border-top:1px solid var(--border);margin:.5rem 0;"></div>
                 <form asp-controller="Account" asp-action="Logout" method="post" style="margin:0;">
                     @Html.AntiForgeryToken()
@@ -557,6 +571,66 @@
             });
         }
 
+        async function votePoll(optionId, postId) {
+            try {
+                const res = await fetch('/Home/VotePoll', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `optionId=${optionId}&__RequestVerificationToken=${getToken()}`
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const pollWrap = document.getElementById('poll-' + postId);
+                    if (pollWrap) {
+                        const options = pollWrap.querySelectorAll('.poll-option');
+                        options.forEach(opt => {
+                            opt.classList.add('voted');
+                            opt.removeAttribute('onclick');
+                            opt.style.pointerEvents = 'none';
+                        });
+
+                        data.results.forEach(res => {
+                            const optEl = pollWrap.querySelector(`[data-option-id="${res.id}"]`);
+                            if (optEl) {
+                                const bar = optEl.querySelector('.poll-bar');
+                                if (bar) bar.style.width = res.percentage + '%';
+                                
+                                const textEl = optEl.querySelector('.poll-text');
+                                if (textEl) {
+                                    const spanText = textEl.querySelector('span:first-child');
+                                    let optionLabel = spanText.textContent;
+                                    optionLabel = optionLabel.replace('✓', '').trim();
+                                    
+                                    const checkmark = (res.id === optionId) ? ' ✓' : '';
+                                    spanText.textContent = optionLabel + checkmark;
+
+                                    let pctSpan = textEl.querySelector('.pct-value') || textEl.querySelector('span:nth-child(2)');
+                                    if (!pctSpan) {
+                                        pctSpan = document.createElement('span');
+                                        pctSpan.className = 'pct-value';
+                                        pctSpan.style.color = 'var(--brand)';
+                                        textEl.appendChild(pctSpan);
+                                    }
+                                    pctSpan.textContent = res.percentage + '%';
+                                }
+                            }
+                        });
+
+                        const totalEl = document.getElementById('poll-total-' + postId);
+                        if (totalEl) {
+                            totalEl.textContent = data.totalVotes + ' votes';
+                        }
+                    }
+                    showToast('Voted successfully!', 'bi-check-circle-fill');
+                } else {
+                    showToast(data.message || 'Failed to vote.', 'bi-exclamation-circle-fill');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('An error occurred.', 'bi-exclamation-circle-fill');
+            }
+        }
+
         function showToast(msg, icon) {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
@@ -568,6 +642,96 @@
                 setTimeout(() => toast.remove(), 400);
             }, 3000);
         }
+    </script>
+
+    <!-- Global Report Post Modal -->
+    <div id="reportModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:9000;align-items:center;justify-content:center;">
+        <div style="background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);border-radius:20px;width:90%;max-width:420px;padding:2rem;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+                <h3 style="font-size:1.1rem;font-weight:700;display:flex;align-items:center;gap:.6rem;">
+                    <i class="bi bi-flag-fill" style="color:#f59e0b;"></i> Báo cáo bài viết
+                </h3>
+                <button onclick="closeReportModal()" style="background:none;border:none;color:#888;font-size:1.2rem;cursor:pointer;"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <p style="color:#aaa;font-size:.85rem;margin-bottom:1.2rem;">Chọn lý do báo cáo bài viết này:</p>
+            <div id="reportReasons" style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:1.5rem;">
+                <label class="report-reason-opt"><input type="radio" name="reportReason" value="Nội dung không phù hợp"> Nội dung không phù hợp</label>
+                <label class="report-reason-opt"><input type="radio" name="reportReason" value="Bạo lực, ngôn từ thù hận"> Bạo lực, ngôn từ thù hận</label>
+                <label class="report-reason-opt"><input type="radio" name="reportReason" value="Spam, quảng cáo trái phép"> Spam, quảng cáo trái phép</label>
+                <label class="report-reason-opt"><input type="radio" name="reportReason" value="Thông tin sai lệch"> Thông tin sai lệch</label>
+                <label class="report-reason-opt"><input type="radio" name="reportReason" value="Vi phạm quyền riêng tư"> Vi phạm quyền riêng tư</label>
+            </div>
+            <div style="display:flex;gap:.8rem;justify-content:flex-end;">
+                <button onclick="closeReportModal()" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#aaa;padding:.6rem 1.2rem;border-radius:12px;cursor:pointer;font-size:.875rem;">Hủy</button>
+                <button onclick="submitReport()" style="background:#f59e0b;color:#fff;border:none;padding:.6rem 1.4rem;border-radius:12px;cursor:pointer;font-weight:600;font-size:.875rem;">
+                    <i class="bi bi-flag-fill"></i> Gửi báo cáo
+                </button>
+            </div>
+        </div>
+    </div>
+    <style>
+    .report-reason-opt {
+        display:flex;align-items:center;gap:.7rem;
+        padding:.75rem 1rem;
+        background:rgba(255,255,255,0.03);
+        border:1px solid rgba(255,255,255,0.07);
+        border-radius:10px;
+        cursor:pointer;
+        font-size:.875rem;
+        color:#e0e0e0;
+        transition:background .15s,border-color .15s;
+    }
+    .report-reason-opt:hover { background:rgba(245,158,11,0.08); border-color:rgba(245,158,11,0.25); }
+    .report-reason-opt input[type=radio] { accent-color:#f59e0b; width:16px; height:16px; }
+    </style>
+    <script>
+    let _reportPostId = null;
+    function openReportModal(postId) {
+        _reportPostId = postId;
+        document.querySelectorAll('input[name="reportReason"]').forEach(r => r.checked = false);
+        const m = document.getElementById('reportModal');
+        m.style.display = 'flex';
+    }
+    function closeReportModal() {
+        document.getElementById('reportModal').style.display = 'none';
+    }
+    async function submitReport() {
+        const reason = document.querySelector('input[name="reportReason"]:checked')?.value;
+        if (!reason) { showToast('Vui lòng chọn lý do báo cáo.', 'bi-exclamation-triangle-fill'); return; }
+        const res = await fetch('/Home/ReportPost', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `postId=${_reportPostId}&reason=${encodeURIComponent(reason)}&__RequestVerificationToken=${getToken()}`
+        });
+        const data = await res.json();
+        closeReportModal();
+        showToast(data.message, data.success ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill');
+    }
+    async function blockUserAction(userId) {
+        if (!confirm('Bạn chắc chắn muốn chặn người dùng này?')) return;
+        const res = await fetch('/Home/BlockUser', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `userId=${userId}&__RequestVerificationToken=${getToken()}`
+        });
+        const data = await res.json();
+        showToast(data.message, data.success ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill');
+        if (data.success) location.reload();
+    }
+    async function unblockUserAction(userId) {
+        const res = await fetch('/Home/UnblockUser', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `userId=${userId}&__RequestVerificationToken=${getToken()}`
+        });
+        const data = await res.json();
+        showToast(data.message, data.success ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill');
+        if (data.success) location.reload();
+    }
+    // Close modal on backdrop click
+    document.getElementById('reportModal').addEventListener('click', e => {
+        if (e.target === document.getElementById('reportModal')) closeReportModal();
+    });
     </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

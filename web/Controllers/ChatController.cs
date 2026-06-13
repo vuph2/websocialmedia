@@ -25,14 +25,20 @@ namespace web.Controllers
         {
             var currentUserId = _userManager.GetUserId(User)!;
 
+            var blockedUserIds = await _db.BlockedUsers
+                .Where(b => b.BlockerId == currentUserId || b.BlockedUserId == currentUserId)
+                .Select(b => b.BlockerId == currentUserId ? b.BlockedUserId : b.BlockerId)
+                .ToListAsync();
+
             var vm = new ChatPageViewModel { CurrentUserId = currentUserId };
 
-            // Load all conversations for current user
+            // Load all conversations for current user, excluding blocked users
             var conversations = await _db.Conversations
                 .Include(c => c.User1)
                 .Include(c => c.User2)
                 .Include(c => c.Messages.OrderByDescending(m => m.SentAt).Take(1))
-                .Where(c => c.User1Id == currentUserId || c.User2Id == currentUserId)
+                .Where(c => (c.User1Id == currentUserId || c.User2Id == currentUserId)
+                            && !blockedUserIds.Contains(c.User1Id == currentUserId ? c.User2Id : c.User1Id))
                 .OrderByDescending(c => c.LastMessageAt)
                 .ToListAsync();
 
@@ -59,6 +65,11 @@ namespace web.Controllers
             // If userId is provided, start/open conversation with that user
             if (!string.IsNullOrEmpty(userId) && userId != currentUserId)
             {
+                if (blockedUserIds.Contains(userId))
+                {
+                    return RedirectToAction("Index");
+                }
+
                 var user1 = string.Compare(currentUserId, userId, StringComparison.Ordinal) < 0 ? currentUserId : userId;
                 var user2 = user1 == currentUserId ? userId : currentUserId;
 
@@ -108,6 +119,11 @@ namespace web.Controllers
 
                 if (conv != null)
                 {
+                    var otherId = conv.User1Id == currentUserId ? conv.User2Id : conv.User1Id;
+                    if (blockedUserIds.Contains(otherId))
+                    {
+                        return RedirectToAction("Index");
+                    }
                     var other = conv.User1Id == currentUserId ? conv.User2 : conv.User1;
                     vm.ActiveConversationId = conv.Id;
                     vm.ActiveRecipientId = other.Id;
@@ -213,8 +229,13 @@ namespace web.Controllers
             var currentUserId = _userManager.GetUserId(User)!;
             var queryLower = q.ToLower().Trim();
 
+            var blockedUserIds = await _db.BlockedUsers
+                .Where(b => b.BlockerId == currentUserId || b.BlockedUserId == currentUserId)
+                .Select(b => b.BlockerId == currentUserId ? b.BlockedUserId : b.BlockerId)
+                .ToListAsync();
+
             var users = await _userManager.Users
-                .Where(u => u.Id != currentUserId &&
+                .Where(u => u.Id != currentUserId && !blockedUserIds.Contains(u.Id) &&
                     ((u.FirstName + " " + u.LastName).ToLower().Contains(queryLower)
                     || u.UserName!.ToLower().Contains(queryLower)
                     || u.Email!.ToLower().Contains(queryLower)))

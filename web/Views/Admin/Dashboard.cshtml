@@ -1,0 +1,177 @@
+@model web.Models.AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="admin-page-header">
+    <div>
+        <h1 class="admin-title">Dashboard</h1>
+        <p class="admin-subtitle">Tổng quan hệ thống Nexus</p>
+    </div>
+    <div class="header-meta">
+        <span class="live-badge"><i class="bi bi-circle-fill"></i> Live</span>
+        <span class="date-badge"><i class="bi bi-calendar3"></i> @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</span>
+    </div>
+</div>
+
+<!-- Stats Grid -->
+<div class="stats-grid">
+    <div class="stat-card stat-blue">
+        <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@Model.TotalUsers.ToString("N0")</div>
+            <div class="stat-label">Tổng người dùng</div>
+            <div class="stat-sub">+@Model.NewUsersToday hôm nay</div>
+        </div>
+    </div>
+    <div class="stat-card stat-purple">
+        <div class="stat-icon"><i class="bi bi-file-richtext-fill"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@Model.TotalPosts.ToString("N0")</div>
+            <div class="stat-label">Tổng bài viết</div>
+            <div class="stat-sub">+@Model.NewPostsToday hôm nay</div>
+        </div>
+    </div>
+    <div class="stat-card stat-green">
+        <div class="stat-icon"><i class="bi bi-chat-dots-fill"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@Model.TotalComments.ToString("N0")</div>
+            <div class="stat-label">Bình luận</div>
+            <div class="stat-sub">Tổng hệ thống</div>
+        </div>
+    </div>
+    <div class="stat-card stat-cyan">
+        <div class="stat-icon"><i class="bi bi-send-fill"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@Model.TotalMessages.ToString("N0")</div>
+            <div class="stat-label">Tin nhắn</div>
+            <div class="stat-sub">Tổng hệ thống</div>
+        </div>
+    </div>
+    <div class="stat-card stat-orange">
+        <div class="stat-icon"><i class="bi bi-flag-fill"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@Model.PendingReports</div>
+            <div class="stat-label">Báo cáo chờ</div>
+            <div class="stat-sub">
+                @if (Model.PendingReports > 0)
+                {
+                    <a href="/Moderation/Queue" class="stat-action-link">Xem ngay →</a>
+                }
+                else
+                {
+                    <span>Không có báo cáo mới</span>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="stat-card stat-red">
+        <div class="stat-icon"><i class="bi bi-shield-x-fill"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@Model.BlockedUsers</div>
+            <div class="stat-label">TK bị khóa</div>
+            <div class="stat-sub">Tổng hệ thống</div>
+        </div>
+    </div>
+</div>
+
+<!-- Two column layout -->
+<div class="dashboard-cols">
+    <!-- Recent Users -->
+    <div class="dash-card">
+        <div class="dash-card-header">
+            <h3><i class="bi bi-person-lines-fill"></i> Người dùng gần đây</h3>
+            <a href="/Admin/Users" class="view-all-link">Xem tất cả →</a>
+        </div>
+        <div class="dash-table-wrap">
+            <table class="dash-table">
+                <thead>
+                    <tr>
+                        <th>Người dùng</th>
+                        <th>Vai trò</th>
+                        <th>Bài viết</th>
+                        <th>Trạng thái</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var u in Model.RecentUsers)
+                    {
+                        <tr>
+                            <td>
+                                <div class="user-cell">
+                                    @if (!string.IsNullOrEmpty(u.Avatar))
+                                    {
+                                        <img src="@u.Avatar" class="user-avatar-sm" alt="@u.FullName" />
+                                    }
+                                    else
+                                    {
+                                        <div class="avatar-placeholder-sm">@(u.FullName.Length > 0 ? u.FullName[0] : 'U')</div>
+                                    }
+                                    <div>
+                                        <div class="user-name">@u.FullName</div>
+                                        <div class="user-email">@u.Email</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                @foreach (var r in u.Roles)
+                                {
+                                    <span class="role-badge role-@r.ToLower()">@r</span>
+                                }
+                                @if (!u.Roles.Any()) { <span class="role-badge role-user">User</span> }
+                            </td>
+                            <td><span class="count-chip">@u.PostCount</span></td>
+                            <td>
+                                @if (u.IsBlocked)
+                                {
+                                    <span class="status-chip status-blocked">Bị khóa</span>
+                                }
+                                else
+                                {
+                                    <span class="status-chip status-active">Hoạt động</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recent Reports -->
+    <div class="dash-card">
+        <div class="dash-card-header">
+            <h3><i class="bi bi-flag-fill"></i> Báo cáo gần đây</h3>
+            <a href="/Moderation/Queue" class="view-all-link">Xem tất cả →</a>
+        </div>
+        @if (!Model.RecentReports.Any())
+        {
+            <div class="empty-state-mini">
+                <i class="bi bi-shield-check"></i>
+                <p>Không có báo cáo chờ xử lý</p>
+            </div>
+        }
+        else
+        {
+            <div class="reports-list">
+                @foreach (var r in Model.RecentReports)
+                {
+                    <div class="report-item">
+                        <div class="report-icon"><i class="bi bi-flag-fill"></i></div>
+                        <div class="report-body">
+                            <div class="report-reason">@r.Reason</div>
+                            <div class="report-meta">
+                                Bởi @r.ReporterName •
+                                @(DateTime.UtcNow.Subtract(r.CreatedAt).TotalHours < 1
+                                    ? $"{(int)DateTime.UtcNow.Subtract(r.CreatedAt).TotalMinutes}p trước"
+                                    : $"{(int)DateTime.UtcNow.Subtract(r.CreatedAt).TotalHours}h trước")
+                            </div>
+                        </div>
+                        <span class="status-chip status-pending">Chờ</span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>

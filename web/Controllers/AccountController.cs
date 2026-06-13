@@ -51,13 +51,29 @@ namespace web.Controllers
                 return View(vm);
             }
 
+            var user = await _userManager.FindByEmailAsync(email) ?? await _userManager.FindByNameAsync(email);
+            if (user == null)
+            {
+                vm.ErrorMessage = "Email hoặc mật khẩu không đúng.";
+                return View(vm);
+            }
+
             var result = await _signInManager.PasswordSignInAsync(
-                email, password, rememberMe, lockoutOnFailure: false);
+                user.UserName!, password, rememberMe, lockoutOnFailure: false);
 
             if (result.Succeeded)
+            {
+                // Check if user is blocked by admin
+                if (user.IsBlocked)
+                {
+                    await _signInManager.SignOutAsync();
+                    vm.ErrorMessage = $"Tài khoản của bạn đã bị khóa. Lý do: {user.BlockedReason ?? "Vi phạm chính sách cộng đồng."}";
+                    return View(vm);
+                }
                 return RedirectToAction("Index", "Home");
+            }
 
-            vm.ErrorMessage = "Invalid email or password.";
+            vm.ErrorMessage = "Email hoặc mật khẩu không đúng.";
             return View(vm);
         }
 
@@ -153,7 +169,16 @@ namespace web.Controllers
                 isPersistent: false, bypassTwoFactor: true);
 
             if (result.Succeeded)
+            {
+                var user = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
+                if (user?.IsBlocked == true)
+                {
+                    await _signInManager.SignOutAsync();
+                    TempData["Error"] = $"Tài khoản của bạn đã bị khóa. Lý do: {user.BlockedReason ?? "Vi phạm chính sách cộng đồng."}";
+                    return RedirectToAction("Login");
+                }
                 return RedirectToAction("Index", "Home");
+            }
 
             var email     = info.Principal.FindFirstValue(ClaimTypes.Email) ?? "";
             var firstName = info.Principal.FindFirstValue(ClaimTypes.GivenName) ?? "User";
@@ -170,6 +195,11 @@ namespace web.Controllers
             var existingUser = await _userManager.FindByEmailAsync(email);
             if (existingUser != null)
             {
+                if (existingUser.IsBlocked)
+                {
+                    TempData["Error"] = $"Tài khoản của bạn đã bị khóa. Lý do: {existingUser.BlockedReason ?? "Vi phạm chính sách cộng đồng."}";
+                    return RedirectToAction("Login");
+                }
                 await _userManager.AddLoginAsync(existingUser, info);
                 await _signInManager.SignInAsync(existingUser, isPersistent: false);
                 return RedirectToAction("Index", "Home");

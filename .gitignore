@@ -7,11 +7,9 @@
 *.userosscache
 *.sln.docstates
 
-# Databases
-Databases/*.mdf
-Databases/*.ldf
-
 # User-specific files
 .idea/
 .vscode/
 .DS_Store
+web/dotnet-install.ps1
+web/wwwroot/uploads/
