@@ -1,0 +1,197 @@
+================================================================================
+          BẢN ĐỒ ÁNH XẠ MÃ CHỨC NĂNG VÀO MÃ NGUỒN (REQUIREMENTS MAPPING GUIDE)
+================================================================================
+
+Tài liệu này chỉ ra chi tiết từng mã chức năng (FR), yêu cầu phi chức năng (NFR),
+quy định nghiệp vụ (BR), Use Case (UC) và tiêu chí nghiệm thu (AC) được cài đặt
+ở các file nào, phương thức nào và dòng bao nhiêu trong dự án.
+
+--------------------------------------------------------------------------------
+1. DANH SÁCH YÊU CẦU CHỨC NĂNG (FUNCTIONAL REQUIREMENTS - FR)
+--------------------------------------------------------------------------------
+
+MÃ FR01: Đăng ký tài khoản (Tác nhân: Người dùng)
+- Vị trí file: web/Controllers/AccountController.cs
+- Hàm/Phương thức: public async Task<IActionResult> RegisterPost(RegisterViewModel model)
+- Dòng code: 83 - 135
+- Giao diện: web/Views/Account/Register.cshtml
+
+MÃ FR02: Đăng nhập (Tác nhân: Người dùng)
+- Vị trí file: web/Controllers/AccountController.cs
+- Hàm/Phương thức: public async Task<IActionResult> LoginPost(LoginViewModel model) (Dòng 39-81)
+                   public IActionResult GoogleLogin() (Dòng 137-142)
+                   public async Task<IActionResult> GoogleCallback(...) (Dòng 152-231)
+- Giao diện: web/Views/Account/Login.cshtml
+
+MÃ FR03: Quản lý hồ sơ (Tác nhân: Người dùng)
+- Vị trí file: web/Controllers/HomeController.cs
+- Hàm/Phương thức: public async Task<IActionResult> Settings() (Dòng 829-844)
+                   public async Task<IActionResult> Settings(SettingsViewModel model) (Dòng 846-878)
+                   public async Task<IActionResult> Profile(string id) (Dòng 548-627)
+- Giao diện: web/Views/Home/Settings.cshtml, web/Views/Home/Profile.cshtml
+
+MÃ FR04: Đăng bài viết (Tác nhân: Người dùng)
+- Vị trí file: web/Controllers/HomeController.cs
+- Hàm/Phương thức: public async Task<IActionResult> CreatePost(CreatePostViewModel model)
+- Dòng code: 182 - 246
+- Giao diện: web/Views/Home/CreatePost.cshtml
+
+MÃ FR05: Xem bảng tin (Tác nhân: Người dùng)
+- Vị trí file: web/Controllers/HomeController.cs
+- Hàm/Phương thức: public async Task<IActionResult> Index() (Dòng 34-177)
+                   public async Task<IActionResult> GetMorePosts(int page) (Dòng 676-715)
+- Giao diện: web/Views/Home/Index.cshtml, web/Views/Home/_PostList.cshtml
+
+MÃ FR06: Thích bài viết (Tác nhân: Người dùng)
+- Vị trí file: web/Controllers/HomeController.cs
+- Hàm/Phương thức: public async Task<IActionResult> ToggleLike(int postId, string type)
+- Dòng code: 275 - 347
+- Giao diện: web/Views/Home/_PostList.cshtml
+
+MÃ FR07: Bình luận bài viết (Tác nhân: Người dùng)
+- Vị trí file: web/Controllers/HomeController.cs
+- Hàm/Phương thức: public async Task<IActionResult> AddComment(int postId, string content) (Dòng 349-394)
+                   public async Task<IActionResult> DeleteComment(int commentId) (Dòng 425-442)
+                   public async Task<IActionResult> AllComments(int postId) (Dòng 444-463)
+- Giao diện: web/Views/Home/_PostList.cshtml (Form bình luận), web/Views/Home/AllComments.cshtml
+
+MÃ FR08: Nhắn tin (Tác nhân: Người dùng)
+- Vị trí file: web/Controllers/ChatController.cs & web/Hubs/NexusHub.cs
+- Hàm/Phương thức: ChatController.Index(...) (Dòng 24-167)
+                   ChatController.GetMessages(...) (Dòng 169-209)
+                   NexusHub.SendDirectMessage(...) (Dòng 67-149)
+- Giao diện: web/Views/Chat/Index.cshtml
+- JavaScript: web/wwwroot/js/chat.js (hoặc script kết nối SignalR)
+
+MÃ FR09: Kết bạn (Tác nhân: Người dùng)
+- Vị trí file: web/Controllers/HomeController.cs
+- Hàm/Phương thức: public async Task<IActionResult> AddFriend(string targetUserId) (Dòng 1021-1079)
+                   public async Task<IActionResult> AcceptFriend(int friendshipId) (Dòng 1081-1131)
+                   public async Task<IActionResult> DeclineFriend(int friendshipId) (Dòng 1133-1159)
+                   public async Task<IActionResult> RemoveFriend(int friendshipId) (Dòng 1161-1195)
+                   public async Task<IActionResult> Friends() (Dòng 1279-1318)
+- Giao diện: web/Views/Home/Friends.cshtml
+
+MÃ FR10: Thông báo (Tác nhân: Người dùng)
+- Vị trí file: web/Controllers/HomeController.cs
+- Hàm/Phương thức: public async Task<IActionResult> Notifications() (Dòng 880-910)
+                   public async Task<IActionResult> MarkNotificationsRead() (Dòng 912-923)
+- Giao diện: web/Views/Home/Notifications.cshtml, listener thời gian thực ở web/Views/Shared/_Layout.cshtml
+
+MÃ FR11: Tìm kiếm người dùng (Tác nhân: Người dùng)
+- Vị trí file: web/Controllers/HomeController.cs & web/Controllers/ChatController.cs
+- Hàm/Phương thức: HomeController.Search(string query) (Dòng 752-827)
+                   ChatController.SearchUsers(string q) (Dòng 225-255)
+- Giao diện: web/Views/Home/Search.cshtml
+
+MÃ FR12: Báo cáo vi phạm (Tác nhân: Người dùng)
+- Vị trí file: web/Controllers/HomeController.cs
+- Hàm/Phương thức: public async Task<IActionResult> ReportPost(int postId, string reason)
+- Dòng code: 1322 - 1352
+
+MÃ FR13: Kiểm duyệt nội dung (Tác nhân: Người kiểm duyệt)
+- Vị trí file: web/Controllers/ModerationController.cs & web/Controllers/AdminController.cs
+- Hàm/Phương thức: ModerationController.Queue(string? status) (Dòng 24-61)
+                   ModerationController.Process(int reportId, string action, string? note) (Dòng 65-103)
+                   AdminController.ResolveReport(int reportId, string action, string? note) (Dòng 226-263)
+- Giao diện: web/Views/Moderation/Queue.cshtml, web/Views/Admin/Reports.cshtml
+
+MÃ FR14: Quản lý người dùng (Tác nhân: Quản trị viên)
+- Vị trí file: web/Controllers/AdminController.cs
+- Hàm/Phương thức: public async Task<IActionResult> BlockUser(string userId, string reason) (Dòng 145-159)
+                   public async Task<IActionResult> UnblockUser(string userId) (Dòng 161-175)
+- Giao diện: web/Views/Admin/Users.cshtml
+
+MÃ FR15: Thống kê hệ thống (Tác nhân: Quản trị viên)
+- Vị trí file: web/Controllers/AdminController.cs
+- Hàm/Phương thức: public async Task<IActionResult> Dashboard()
+- Dòng code: 29 - 86
+- Giao diện: web/Views/Admin/Dashboard.cshtml
+
+MÃ FR16: Phân quyền (Tác nhân: Quản trị viên)
+- Vị trí file: web/Controllers/AdminController.cs
+- Hàm/Phương thức: public async Task<IActionResult> ChangeRole(string userId, string newRole)
+- Dòng code: 177 - 197
+- Giao diện: web/Views/Admin/Users.cshtml (nút Phân quyền/Dropdown vai trò)
+
+MÃ FR17: Sao lưu dữ liệu (Tác nhân: Quản trị viên)
+- Vị trí file: web/Controllers/AdminController.cs
+- Hàm/Phương thức: public IActionResult Backup() (Dòng 286-312)
+                   public async Task<IActionResult> CreateBackup() (Dòng 314-345)
+                   public async Task<IActionResult> DownloadBackup(string filename) (Dòng 347-367)
+                   public IActionResult DeleteBackup(string filename) (Dòng 369-395)
+- Giao diện: web/Views/Admin/Backup.cshtml
+- Thư mục lưu trữ tệp vật lý: web/Databases/Backups/
+
+--------------------------------------------------------------------------------
+2. DANH SÁCH MÃ USE CASE CHI TIẾT (USE CASES - UC)
+--------------------------------------------------------------------------------
+
+MÃ UC01: Đăng ký tài khoản
+- Hàm xử lý: AccountController.RegisterPost(RegisterViewModel model) (web/Controllers/AccountController.cs#L83)
+
+MÃ UC02: Đăng bài viết
+- Hàm xử lý: HomeController.CreatePost(CreatePostViewModel model) (web/Controllers/HomeController.cs#L182)
+
+MÃ UC03: Nhắn tin
+- Hàm xử lý: ChatController.Index() & ChatController.GetMessages() kết hợp NexusHub.SendDirectMessage() (web/Hubs/NexusHub.cs#L67)
+
+MÃ UC04: Kiểm duyệt
+- Hàm xử lý: ModerationController.Process(...) (web/Controllers/ModerationController.cs#L65)
+             AdminController.ResolveReport(...) (web/Controllers/AdminController.cs#L228)
+
+--------------------------------------------------------------------------------
+3. DANH SÁCH QUY ĐỊNH NGHIỆP VỤ (BUSINESS RULES - BR)
+--------------------------------------------------------------------------------
+
+MÃ BR01: Email không được trùng
+- Kiểm soát bởi ASP.NET Core Identity.
+- Hàm check đăng ký: AccountController.RegisterPost() gọi `_userManager.FindByEmailAsync` (web/Controllers/AccountController.cs#L92).
+
+MÃ BR02: Mật khẩu tối thiểu 8 ký tự
+- Cấu hình tại: web/Program.cs
+- Dòng code: dòng 46 (`options.Password.RequiredLength = 8;`)
+
+MÃ BR03: Không đăng nội dung vi phạm
+- Quản trị viên/Người kiểm duyệt thực hiện xóa bài, hệ thống gửi Notification cảnh báo.
+- Hàm gửi Notification: ModerationController.Process(...) (Dòng 83-91) & AdminController.ResolveReport(...) (Dòng 246-255).
+
+MÃ BR04: Người dùng có thể chặn tài khoản khác
+- Hàm chặn: HomeController.Profile() kiểm tra quan hệ chặn để ném lỗi 404 (dòng 552-563).
+- Chat: NexusHub.SendDirectMessage() từ chối gửi tin nếu có quan hệ chặn (dòng 73-78).
+
+MÃ BR05: Chỉ người dùng đăng nhập mới được bình luận
+- Vị trí: web/Controllers/HomeController.cs
+- Ràng buộc: Thuộc tính `[Authorize]` trên đầu hàm `AddComment` (dòng 348).
+
+MÃ BR06: Quản trị viên có toàn quyền
+- Ràng buộc: Thuộc tính `[Authorize(Roles = "Admin")]` trên đầu lớp `AdminController` (web/Controllers/AdminController.cs#L11).
+
+MÃ BR07: Nội dung vi phạm sẽ bị xóa
+- Hàm thực thi xóa bài viết: AdminController.ResolveReport(...) (dòng 257) & ModerationController.Process(...) (dòng 93).
+
+--------------------------------------------------------------------------------
+4. TIÊU CHÍ NGHIỆM THU (ACCEPTANCE CRITERIA - AC)
+--------------------------------------------------------------------------------
+
+MÃ AC01: Đăng ký thành công -> AccountController.RegisterPost() trả về chuyển hướng RedirectToAction("Index", "Home").
+MÃ AC02: Đăng nhập thành công -> AccountController.LoginPost() đăng nhập cookie thành công và chuyển hướng.
+MÃ AC03: Đăng bài hoạt động đúng -> HomeController.CreatePost() lưu Post và PostMedia thành công vào database.
+MÃ AC04: Bình luận hoạt động đúng -> HomeController.AddComment() lưu vào CSDL và cập nhật AJAX tức thời.
+MÃ AC05: Nhắn tin hoạt động đúng -> SignalR Hub NexusHub.cs phát sự kiện WebSocket trực tiếp cho người nhận.
+MÃ AC06: Hệ thống phân quyền đúng -> Phân biệt vai trò "Admin", "Moderator", "User" qua Identity và phân luồng truy cập các Dashboard.
+MÃ AC07: Backup dữ liệu thành công -> Tệp tin .bak được xuất ra thư mục Backups/ thành công mà không gây downtime.
+MÃ AC08: Website hoạt động ổn định -> Cơ chế bắt lỗi ngoại lệ Middleware tự động cấu hình trong Program.cs.
+
+--------------------------------------------------------------------------------
+5. YÊU CẦU PHI CHỨC NĂNG (NON-FUNCTIONAL REQUIREMENTS - NFR)
+--------------------------------------------------------------------------------
+
+MÃ NFR01: Hiệu năng tải trang dưới 3s -> Tối ưu hóa database, truy vấn LINQ sử dụng `.Include(...)` để tránh lỗi truy vấn N+1.
+MÃ NFR02: Bảo mật mã hóa mật khẩu -> Identity tự động mã hóa bằng thuật toán băm bảo mật cao (PBKDF2/Bcrypt tương đương).
+MÃ NFR03: Tương thích trình duyệt -> Cấu hình bằng HTML5 tiêu chuẩn và Vanilla CSS trong web/wwwroot/css/site.css.
+MÃ NFR04: Khả năng mở rộng -> Áp dụng mô hình MVC sạch sẽ, phân chia Service độc lập (như StoryCleanupService).
+MÃ NFR05: Tính sẵn sàng -> Uptime được tối ưu hóa qua xử lý lỗi Exception Handler tại Program.cs (dòng 139).
+MÃ NFR06: Sao lưu dữ liệu mỗi ngày -> Cho phép Admin chủ động sao lưu định kỳ qua giao diện `/Admin/Backup` an toàn.
+MÃ NFR07: Giao diện Responsive -> Sử dụng Media Queries và Flexbox/CSS Grid trong site.css và trang cá nhân.
+================================================================================
