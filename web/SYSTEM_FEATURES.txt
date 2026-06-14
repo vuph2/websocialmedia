@@ -1,378 +1,302 @@
 ================================================================================
-          TÀI LIỆU KHẢO SÁT & ĐẶC TẢ CHI TIẾT CÁC CHỨC NĂNG (SYSTEM FEATURES GUIDE)
+                    WEBSITE MẠNG XÃ HỘI NEXUS - CẨM NANG CHI TIẾT
+         (SYSTEM FEATURES & SOURCE CODE REQUIREMENTS MAPPING DIRECTORY)
 ================================================================================
 
-Tài liệu này tích hợp toàn bộ danh sách chức năng (chức năng), yêu cầu chức năng (FR),
-yêu cầu phi chức năng (NFR), quy định nghiệp vụ (BR), Use Case (UC) và tiêu chí nghiệm thu (AC).
-Được chia thành 14 Module chính rõ ràng, giúp lập trình viên và kiểm thử viên đối chiếu trực tiếp.
+Tài liệu này là sự kết hợp đồng bộ giữa Danh sách Chức năng Hệ thống và Bản đồ 
+Ánh xạ Mã nguồn. Giúp các thành viên trong nhóm phát triển nắm bắt nhanh:
+- Mã yêu cầu (FR, NFR, BR, UC, AC)
+- Cách hoạt động (How it works)
+- Nơi hoạt động (Where it works) - file, lớp, hàm, dòng code.
+- Tại sao hoạt động (Why it works) - cơ chế hoạt động, truy vấn EF Core, SignalR, v.v.
+
+--------------------------------------------------------------------------------
+MỤC LỤC CHƯƠNG (MODULES INDEX)
+--------------------------------------------------------------------------------
+[MODULE 01] Xác thực & Quản lý tài khoản (FR01, FR02, UC01, BR01, BR02, AC01, AC02, NFR02)
+[MODULE 02] Bảng tin hệ thống & Tải trang vô hạn (FR05, NFR01, AC08)
+[MODULE 03] Đăng bài viết & Đính kèm đa định dạng (FR04, UC02, AC03, NFR07)
+[MODULE 04] Tương tác: Thích & Bình luận bài viết (FR06, FR07, BR05, AC04)
+[MODULE 05] Hệ thống Bình chọn / Khảo sát (Polls & AJAX Voting)
+[MODULE 06] Bản tin ngắn 24 giờ (Stories Carousel & Viewer)
+[MODULE 07] Kết bạn & Theo dõi người dùng (FR09, AC05)
+[MODULE 08] Trang cá nhân & Thiết lập (FR03, BR04)
+[MODULE 09] Nhắn tin trực tiếp thời gian thực (FR08, UC03, AC05)
+[MODULE 10] Thông báo thời gian thực (FR10)
+[MODULE 11] Báo cáo vi phạm & Hàng đợi kiểm duyệt (FR12, FR13, UC04, BR03, BR07)
+[MODULE 12] Bảng quản trị Admin & Quản lý thành viên (FR14, FR15, FR16, BR06)
+[MODULE 13] Sao lưu dữ liệu hệ thống (FR17, NFR06, AC07)
+[MODULE 14] Khởi tạo cơ sở dữ liệu & Ánh xạ (Database & EF Core Mapping)
 
 ================================================================================
-MODULE 1: XÁC THỰC & QUẢN LÝ TÀI KHOẢN (AUTHENTICATION & ACCOUNT)
+[MODULE 01] XÁC THỰC & QUẢN LÝ TÀI KHẢN (AUTHENTICATION & ACCOUNT)
 ================================================================================
-✦ ÁNH XẠ MÃ YÊU CẦU:
-  - Yêu cầu chức năng (FR): FR01 (Đăng ký), FR02 (Đăng nhập)
-  - Use Case (UC): UC01 (Đăng ký)
-  - Tiêu chí nghiệm thu (AC): AC01 (Đăng ký thành công), AC02 (Đăng nhập thành công)
-  - Quy định nghiệp vụ (BR): BR01 (Email không trùng), BR02 (Mật khẩu tối thiểu 8 ký tự)
-  - Yêu cầu phi chức năng (NFR): NFR02 (Mã hóa mật khẩu)
-
-✦ CÁCH HOẠT ĐỘNG (HOW IT WORKS):
-  * Người dùng đăng ký tài khoản bằng cách nhập Họ tên, Email, Username và Mật khẩu.
-  * Hỗ trợ đăng nhập đa luồng (Multi-Credential): Nhập Email hoặc Username đều đăng nhập được.
-  * Hỗ trợ đăng nhập Google OAuth: Liên kết tài khoản bên thứ 3 và tự động đăng nhập.
-  * Cho phép người dùng đã đăng nhập thay đổi mật khẩu hoặc đăng xuất khỏi hệ thống.
-
-✦ NƠI HOẠT ĐỘNG (WHERE IT WORKS):
-  * Controller: web/Controllers/AccountController.cs
-    - Đăng ký: `RegisterPost` (Dòng 83-135)
-    - Đăng nhập: `LoginPost` (Dòng 39-81)
-    - Google Login: `GoogleLogin` & `GoogleCallback` (Dòng 137-231)
-  * Views: web/Views/Account/Login.cshtml, Register.cshtml, ChangePassword.cshtml
-  * CSDL (Tables): AspNetUser, AspNetUserLogin, AspNetUserClaim
-
-✦ TẠI SAO HOẠT ĐỘNG (WHY IT WORKS):
-  * Sử dụng ASP.NET Core Identity Framework (`UserManager`, `SignInManager`) tự động quản lý phiên và cookie bảo mật.
-  * Mật khẩu được mã hóa tự động bằng thuật toán băm bảo mật PBKDF2 (tương thích NFR02).
-  * Trong `LoginPost`, hệ thống gọi `_userManager.FindByEmailAsync()` trước, nếu null sẽ gọi `_userManager.FindByNameAsync()`, giúp hỗ trợ đăng nhập bằng cả 2 cách.
-  * Mật khẩu đăng ký bắt buộc có độ dài tối thiểu là 8 ký tự được định cấu hình tại [Program.cs](file:///d:/websocialmedia/web/Program.cs#L46) (đáp ứng BR02).
+- MÃ YÊU CẦU: FR01 (Đăng ký), FR02 (Đăng nhập), UC01 (Use Case Đăng ký), BR01 (Email độc nhất), BR02 (Mật khẩu ≥ 8 ký tự), AC01 (Nghiệm thu Đăng ký), AC02 (Nghiệm thu Đăng nhập), NFR02 (Mã hóa mật khẩu)
+- CÁCH HOẠT ĐỘNG (How it works):
+  * Người dùng tạo tài khoản mới bằng cách cung cấp thông tin cá nhân và mật khẩu tối thiểu 8 ký tự. Hệ thống mã hóa mật khẩu trước khi lưu.
+  * Người dùng có thể đăng nhập bằng Email hoặc Username. Cho phép liên kết đăng nhập qua Google OAuth.
+- NƠI HOẠT ĐỘNG (Where it works):
+  * Controller xử lý: web/Controllers/AccountController.cs
+    - Đăng ký: RegisterPost (Dòng 83-135)
+    - Đăng nhập: LoginPost (Dòng 39-81)
+    - Google OAuth: GoogleLogin (Dòng 137-142) & GoogleCallback (Dòng 152-231)
+  * Cấu hình nghiệp vụ mật khẩu: web/Program.cs (Dòng 46)
+  * Giao diện (Views): web/Views/Account/Login.cshtml, web/Views/Account/Register.cshtml
+  * Bảng Cơ sở dữ liệu: AspNetUser (Lưu thông tin cốt lõi), AspNetUserLogin (Liên kết OAuth Google)
+- TẠI SAO HOẠT ĐỘNG (Why it works):
+  * ASP.NET Core Identity tự động quản lý phiên làm việc bằng Cookie và mã hóa mật khẩu bằng thuật toán băm PBKDF2 bảo mật cao.
+  * Action LoginPost sử dụng kiểm tra Email trước, nếu null thì tìm kiếm theo Username, tạo ra trải nghiệm đăng nhập đa luồng cực kỳ thân thiện.
 
 ================================================================================
-MODULE 2: BẢNG TIN HỆ THỐNG & TẢI TRANG ĐỘNG (SYSTEM FEED & INFINITE SCROLL)
+[MODULE 02] BẢNG TIN HỆ THỐNG & TẢI TRANG ĐỘNG (SYSTEM FEED & INFINITE SCROLL)
 ================================================================================
-✦ ÁNH XẠ MÃ YÊU CẦU:
-  - Yêu cầu chức năng (FR): FR05 (Xem bảng tin)
-  - Tiêu chí nghiệm thu (AC): AC08 (Website hoạt động ổn định)
-  - Yêu cầu phi chức năng (NFR): NFR01 (Hiệu năng tải dưới 3 giây)
-
-✦ CÁCH HOẠT ĐỘNG (HOW IT WORKS):
-  * Hiển thị danh sách các bài viết của người dùng trên trang chủ theo thứ tự thời gian mới nhất.
-  * Tự động lọc các bài viết dựa trên cài đặt quyền riêng tư (Public, Followers, Private).
-  * Lọc sạch (không hiển thị) các bài viết của người dùng đã chặn bạn hoặc người dùng mà bạn chặn.
-  * Hỗ trợ cuộn chuột tải thêm bài viết (Infinite Scroll) mà không cần tải lại toàn bộ trang.
-
-✦ NƠI HOẠT ĐỘNG (WHERE IT WORKS):
-  * Controller: web/Controllers/HomeController.cs
-    - Tải trang chủ: `Index` (Dòng 34-177)
-    - Tải thêm AJAX: `GetMorePosts` (Dòng 676-715)
-  * Views: web/Views/Home/Index.cshtml, web/Views/Home/_PostList.cshtml
-  * JavaScript: Mã lắng nghe sự kiện cuộn trang trong file web/Views/Shared/_Layout.cshtml
-
-✦ TẠI SAO HOẠT ĐỘNG (WHY IT WORKS):
-  * Tải trang dưới 3 giây (NFR01) nhờ sử dụng LINQ query nạp trước dữ liệu liên quan (Eager Loading) thông qua `.Include(p => p.User).Include(p => p.PostMedia)...`.
-  * Bộ lọc chặn kép loại bỏ bài viết của người dùng liên quan đến quan hệ chặn:
-    `postsQuery = postsQuery.Where(p => !_db.BlockedUsers.Any(b => (b.BlockerId == currentUserId && b.BlockedUserId == p.UserId) || (b.BlockerId == p.UserId && b.BlockedUserId == currentUserId)))`
-  * Khi cuộn xuống cuối, JavaScript thực hiện fetch AJAX `/Home/GetMorePosts?page=X`. Server kết xuất Partial View `_PostList.cshtml` thành chuỗi HTML và JavaScript chèn trực tiếp vào DOM bằng `.insertAdjacentHTML('beforeend', html)`.
+- MÃ YÊU CẦU: FR05 (Xem bảng tin), NFR01 (Hiệu năng tải trang < 3s), AC08 (Hoạt động ổn định)
+- CÁCH HOẠT ĐỘNG (How it works):
+  * Hiển thị bài viết của mọi người (công khai) hoặc của những người đang theo dõi theo trình tự thời gian mới nhất.
+  * Tải thêm bài viết tự động khi người dùng cuộn xuống dưới cùng của trang bằng AJAX.
+- NƠI HOẠT ĐỘNG (Where it works):
+  * Controller xử lý: web/Controllers/HomeController.cs
+    - Bảng tin chính: Index (Dòng 34-177)
+    - Tải thêm bài viết: GetMorePosts (Dòng 676-715)
+  * Giao diện (Views): web/Views/Home/Index.cshtml, web/Views/Home/_PostList.cshtml (Partial View kết xuất HTML bài viết)
+  * JavaScript cuộn trang: web/Views/Shared/_Layout.cshtml
+- TẠI SAO HOẠT ĐỘNG (Why it works):
+  * EF Core sử dụng Eager Loading (.Include()) để nạp toàn bộ ảnh, video, danh sách thích và bình luận trong 1 câu truy vấn duy nhất, đạt hiệu năng tải dưới 3 giây (NFR01).
+  * Khi cuộn trang, JS thực hiện gọi AJAX fetch() ngầm đến /Home/GetMorePosts, server trả về HTML kết xuất từ Partial View và JS tự chèn vào DOM bằng `.insertAdjacentHTML('beforeend', html)`.
 
 ================================================================================
-MODULE 3: ĐĂNG BÀI VIẾT KÈM MULTI-FORMAT FILE UPLOADS (ANY FILE TYPE)
+[MODULE 03] ĐĂNG BÀI VIẾT KÈM ĐA PHƯƠNG TIỆN (POST CREATION & MULTI-FORMAT UPLOADS)
 ================================================================================
-✦ ÁNH XẠ MÃ YÊU CẦU:
-  - Yêu cầu chức năng (FR): FR04 (Đăng bài viết)
-  - Use Case (UC): UC02 (Đăng bài viết)
-  - Tiêu chí nghiệm thu (AC): AC03 (Đăng bài hoạt động đúng)
-  - Quy định nghiệp vụ (BR): BR03 (Không đăng nội dung vi phạm)
-
-✦ CÁCH HOẠT ĐỘNG (HOW IT WORKS):
-  * Người dùng đăng bài viết gồm văn bản, cảm xúc, quyền riêng tư và đính kèm nhiều tệp tin tùy ý (ảnh, video, PDF, ZIP, RAR, Word, Excel, TXT...).
-  * Cho phép tải lên tối đa 10 tệp tin cùng lúc (tối đa 50MB/tệp).
-  * Ảnh/video hiển thị dạng lưới trực quan; các file tài liệu khác hiển thị dạng thẻ tải xuống chuyên nghiệp.
-
-✦ NƠI HOẠT ĐỘNG (WHERE IT WORKS):
-  * Controller: web/Controllers/HomeController.cs
-    - Đăng bài: `CreatePost` (Dòng 182-246)
-    - Xóa bài: `DeletePost` (Dòng 251-273)
-  * Views: web/Views/Home/CreatePost.cshtml, web/Views/Home/_PostList.cshtml
-  * CSDL (Tables): Post, PostMedia
-
-✦ TẠI SAO HOẠT ĐỘNG (WHY IT WORKS):
-  * Thẻ input gỡ bỏ thuộc tính `accept` giới hạn, cho phép chọn mọi loại file.
-  * File được lưu trữ trên đĩa cứng tại thư mục `wwwroot/uploads/` bằng tên duy nhất dạng `{Guid}_{OriginalFileName}` để tránh trùng lặp.
-  * Razor view [_PostList.cshtml](file:///d:/websocialmedia/web/Views/Home/_PostList.cshtml) phân tích phần mở rộng của tệp (.jpg, .mp4, .pdf...) để quyết định render thẻ `<img>`, `<video controls>` hay thẻ tài liệu tải về `<a download>`.
+- MÃ YÊU CẦU: FR04 (Đăng bài), UC02 (Use Case Đăng bài), AC03 (Nghiệm thu Đăng bài), NFR07 (Mobile Responsive layout)
+- CÁCH HOẠT ĐỘNG (How it works):
+  * Cho phép người dùng đăng tải nội dung văn bản kèm tệp tin đính kèm bất kỳ (Ảnh, Video, PDF, ZIP, RAR, Word, Excel...).
+  * Dung lượng mỗi tệp lên tới 50MB (tối đa 10 tệp cùng lúc).
+  * Ở bảng tin, hình ảnh/video tự hiển thị dạng lưới; tài liệu/tệp nén tự hiển thị thành các thẻ download có biểu tượng mở rộng tương ứng và cho phép tải xuống trực tiếp.
+- NƠI HOẠT ĐỘNG (Where it works):
+  * Controller xử lý: web/Controllers/HomeController.cs
+    - Đăng bài: CreatePost (Dòng 182-246)
+    - Chỉnh sửa: EditPost (Dòng 405-423)
+    - Xóa bài: DeletePost (Dòng 251-273)
+  * Giao diện (Views): web/Views/Home/CreatePost.cshtml, web/Views/Home/_PostList.cshtml (Logic phân tích loại tệp đính kèm)
+  * Bảng Cơ sở dữ liệu: Post (Thông tin bài viết), PostMedia (Đường dẫn tệp đính kèm)
+- TẠI SAO HOẠT ĐỘNG (Why it works):
+  * Gỡ bỏ thuộc tính `accept` ở thẻ `<input type="file" ...>` cho phép chọn mọi loại file.
+  * Phía backend tạo tên file duy nhất theo định dạng {Guid}_{Tên_Gốc} tránh trùng lặp và lưu vào thư mục `wwwroot/uploads/`.
+  * Razor view đọc phần mở rộng của file để quyết định xuất thẻ <img>/<video> hay thẻ nén kèm đường dẫn tải về.
 
 ================================================================================
-MODULE 4: THÍCH & BÌNH LUẬN BÀI VIẾT (POST LIKES & COMMENTS)
+[MODULE 04] TƯƠNG TÁC BÀI VIẾT (POST LIKES & COMMENTS)
 ================================================================================
-✦ ÁNH XẠ MÃ YÊU CẦU:
-  - Yêu cầu chức năng (FR): FR06 (Thích bài viết), FR07 (Bình luận bài viết)
-  - Tiêu chí nghiệm thu (AC): AC04 (Bình luận hoạt động đúng)
-  - Quy định nghiệp vụ (BR): BR05 (Chỉ người dùng đăng nhập mới được bình luận)
-
-✦ CÁCH HOẠT ĐỘNG (HOW IT WORKS):
-  * Cho phép thả tim/thích bài viết. Nhấn lần 2 để hủy thích.
-  * Người dùng viết bình luận dưới bài viết. Có thể tự xóa bình luận của mình.
-  * Tải bình luận bất đồng bộ qua AJAX để tránh load lại trang khi xem danh sách dài.
-
-✦ NƠI HOẠT ĐỘNG (WHERE IT WORKS):
-  * Controller: web/Controllers/HomeController.cs
-    - Thích bài: `ToggleLike` (Dòng 275-347)
-    - Bình luận: `AddComment` (Dòng 349-394), `DeleteComment` (Dòng 425-442)
-  * Views: web/Views/Home/_PostList.cshtml, web/Views/Home/AllComments.cshtml
-  * CSDL (Tables): PostLike, Comment
-
-✦ TẠI SAO HOẠT ĐỘNG (WHY IT WORKS):
-  * Hàm `ToggleLike` kiểm tra bản ghi tương ứng trong bảng `PostLike`. Nếu có thì xóa (unlike), chưa có thì thêm (like) và trả về JSON chứa tổng số lượng thích mới để cập nhật giao diện.
-  * Phương thức `AddComment` được bảo vệ bởi thuộc tính `[Authorize]` (BR05). Khi lưu bình luận thành công, hệ thống tự động tạo thực thể `Notification` gửi tới tác giả bài viết qua SignalR.
+- MÃ YÊU CẦU: FR06 (Thích bài viết), FR07 (Bình luận bài viết), BR05 (Đăng nhập mới được bình luận), AC04 (Nghiệm thu Bình luận)
+- CÁCH HOẠT ĐỘNG (How it works):
+  * Thả cảm xúc thích/bày tỏ cảm xúc (like, love, haha, wow...) trên bài viết. Nhấn lại để hủy.
+  * Viết bình luận và hiển thị bình luận tức thời. Cho phép xóa bình luận của chính mình.
+- NƠI HOẠT ĐỘNG (Where it works):
+  * Controller xử lý: web/Controllers/HomeController.cs
+    - Thích bài viết: ToggleLike (Dòng 275-347)
+    - Viết bình luận: AddComment (Dòng 349-394)
+    - Xóa bình luận: DeleteComment (Dòng 425-442)
+  * Ràng buộc đăng nhập: Thuộc tính `[Authorize]` trên đầu hàm AddComment (Dòng 348)
+  * Bảng Cơ sở dữ liệu: PostLike, Comment
+- TẠI SAO HOẠT ĐỘNG (Why it works):
+  * ToggleLike lưu/xóa lượt thích dựa vào ID người dùng và ID bài viết trong bảng PostLike, trả về JSON cập nhật số lượng động ngay tại giao diện.
+  * AddComment lưu bình luận vào CSDL, đồng thời kích hoạt gửi thông báo thực tế cho chủ sở hữu bài viết qua SignalR.
 
 ================================================================================
-MODULE 5: KHẢO SÁT / BÌNH CHỌN TRONG BÀI VIẾT (POLL VOTING)
+[MODULE 05] HỆ THỐNG KHẢO SÁT / BÌNH CHỌN (POLL VOTING ENGINE)
 ================================================================================
-✦ ÁNH XẠ MÃ YÊU CẦU:
-  - Yêu cầu chức năng (FR): FR04 (Đăng bài viết - Loại Khảo sát)
-  - Tiêu chí nghiệm thu (AC): AC03 (Đăng bài hoạt động đúng - Loại Khảo sát)
-
-✦ CÁCH HOẠT ĐỘNG (HOW IT WORKS):
-  * Người đăng có thể đính kèm câu hỏi khảo sát và nhiều phương án lựa chọn khi viết bài.
-  * Người xem nhấp chọn một phương án để bình chọn.
-  * Tỷ lệ phần trăm và tổng số bình chọn được tính toán và vẽ lại tức thời bằng hiệu ứng chuyển động phần trăm.
-
-✦ NƠI HOẠT ĐỘNG (WHERE IT WORKS):
-  * Controller: web/Controllers/HomeController.cs
-    - Bình chọn: `VotePoll` (Dòng 465-503)
-  * Giao diện hiển thị: web/Views/Home/_PostList.cshtml
-  * JavaScript AJAX: Hàm `votePoll` trong file web/Views/Shared/_Layout.cshtml (Dòng 571-631)
-  * CSDL (Tables): PollOption, PollVote
-
-✦ TẠI SAO HOẠT ĐỘNG (WHY IT WORKS):
-  * JavaScript gửi yêu cầu POST bất đồng bộ tới `/Home/VotePoll?optionId=X` kèm token CSRF bảo mật.
-  * Controller kiểm tra nếu người dùng chưa bình chọn cho cuộc khảo sát này thì thêm bản ghi vào `PollVote`.
-  * Sau khi lưu thành công, hệ thống tính toán lại tỷ lệ phần trăm của từng phương án rồi trả về JSON. JavaScript nhận dữ liệu, định vị phần tử qua thuộc tính `data-option-id` và điều chỉnh độ rộng của thanh biểu đồ `bar.style.width = percentage + '%'`.
+- CÁCH HOẠT ĐỘNG (How it works):
+  * Người dùng có thể tạo một bài viết chứa cuộc bình chọn (Poll) gồm câu hỏi và nhiều phương án.
+  * Người xem nhấp chọn phương án để bình chọn.
+  * Tỷ lệ phần trăm và tổng số phiếu của từng phương án được vẽ lại tức thời bằng hiệu ứng di chuyển thanh phần trăm động mà không tải lại trang.
+- NƠI HOẠT ĐỘNG (Where it works):
+  * Controller xử lý: web/Controllers/HomeController.cs
+    - Bình chọn: VotePoll (Dòng 465-503)
+  * JavaScript thực thi AJAX: web/Views/Shared/_Layout.cshtml (Hàm votePoll, Dòng 571-631)
+  * Giao diện (Views): web/Views/Home/_PostList.cshtml (Gán thuộc tính data-option-id vào các phương án)
+  * Bảng Cơ sở dữ liệu: PollOption (Các phương án), PollVote (Chi tiết lượt bầu chọn)
+- TẠI SAO HOẠT ĐỘNG (Why it works):
+  * JS gửi request POST bất đồng bộ (fetch()) chứa optionId kèm CSRF Anti-Forgery Token.
+  * Server kiểm tra quyền bình chọn (chưa từng vote câu hỏi này), lưu lượt bầu chọn, tính toán lại phần trăm của tất cả phương án trong cuộc khảo sát đó rồi phản hồi dạng JSON.
+  * JS nhận kết quả, cập nhật độ rộng thuộc tính CSS (bar.style.width), thay đổi text phần trăm, gán dấu (✓) và vô hiệu hóa sự kiện click để tránh bình chọn trùng lặp.
 
 ================================================================================
-MODULE 6: BẢN TIN NGẮN 24H (STORIES CAROUSEL & VIEWER)
+[MODULE 06] BẢN TIN NGẮN 24 GIỜ (STORIES CAROUSEL & VIEWER)
 ================================================================================
-✦ ÁNH XẠ MÃ YÊU CẦU:
-  - Yêu cầu chức năng (FR): FR04 (Đăng bài viết - Loại Story)
-  - Tiêu chí nghiệm thu (AC): AC03 (Đăng bài hoạt động đúng - Loại Story)
-  - Yêu cầu phi chức năng (NFR): NFR07 (Giao diện Responsive trên mobile)
-
-✦ CÁCH HOẠT ĐỘNG (HOW IT WORKS):
-  * Người dùng đăng các mẩu tin ngắn (ảnh hoặc video) hiển thị ở đầu trang chủ và tự động biến mất sau 24 giờ.
-  * Kích thước khung hiển thị Stories được cố định chuẩn chân dung dọc (portrait), không bị méo ảnh hay kéo giãn bề ngang khi phát video 16:9.
-  * Ghi nhận lượt xem Story và cho phép người đăng xem thống kê người đã xem.
-
-✦ NƠI HOẠT ĐỘNG (WHERE IT WORKS):
-  * Controller: web/Controllers/HomeController.cs
-    - Đăng Story: `CreateStory` (Dòng 925-976)
-    - Ghi nhận lượt xem: `RecordStoryView` (Dòng 1257-1277)
-  * Giao diện: web/Views/Home/Index.cshtml
-  * CSDL (Tables): Story, StoryLike, StoryView
-
-✦ TẠI SAO HOẠT ĐỘNG (WHY IT WORKS):
-  * Lọc bài đăng trong vòng 24 giờ bằng điều kiện truy vấn: `s.CreatedAt >= DateTime.Now.AddHours(-24)`.
-  * CSS cố định `.story-card` ở kích thước `width: 110px; height: 180px;`. Sử dụng thuộc tính `object-fit: cover` cho các phần tử ảnh/video con bên trong để tự động cắt xén nội dung cho vừa khít mà không biến dạng (giúp giao diện luôn đẹp mắt và tương thích mobile NFR07).
+- CÁCH HOẠT ĐỘNG (How it works):
+  * Đăng Stories (tin ngắn) dạng hình ảnh/video ngắn biến mất hoàn toàn sau 24h.
+  * Hiển thị danh sách Stories bằng thanh trượt ngang có kích thước dọc chân dung chuẩn 110px x 180px, không bị kéo dãn hình kể cả khi video là khung hình ngang.
+  * Người dùng xem Stories có thể thả tim/thích và chủ Stories có thể xem danh sách thống kê những ai đã xem tin của mình.
+- NƠI HOẠT ĐỘNG (Where it works):
+  * Controller xử lý: web/Controllers/HomeController.cs
+    - Đăng Story: CreateStory (Dòng 925-976)
+    - Xem Story: RecordStoryView (Dòng 1257-1277)
+    - Thả tim Story: ToggleStoryLike (Dòng 1197-1255)
+  * CSS định dạng: web/wwwroot/css/site.css (Style cho .story-card và các thẻ media con)
+  * Bảng Cơ sở dữ liệu: Story, StoryLike, StoryView
+- TẠI SAO HOẠT ĐỘNG (Why it works):
+  * LINQ chỉ truy vấn các Stories trong vòng 24 giờ qua: `s.CreatedAt >= DateTime.Now.AddHours(-24)`.
+  * CSS sử dụng width: 110px; min-width: 110px; height: 180px; kèm object-fit: cover cho các thẻ ảnh/video con giúp tự động xén bớt phần dư thừa, vừa khít khung dọc mà không bị méo.
+  * Sự kiện mở xem Story sẽ gửi AJAX /Home/RecordStoryView?storyId=X để ghi nhận lượt xem.
 
 ================================================================================
-MODULE 7: KẾT BẠN & THEO DÕI NGƯỜI DÙNG (FRIEND REQUESTS & FOLLOWS)
+[MODULE 07] KẾT BẠN & THEO DÕI NGƯỜI DÙNG (FRIENDS & FOLLOWS)
 ================================================================================
-✦ ÁNH XẠ MÃ YÊU CẦU:
-  - Yêu cầu chức năng (FR): FR09 (Kết bạn)
-  - Tiêu chí nghiệm thu (AC): AC08 (Hoạt động ổn định)
-
-✦ CÁCH HOẠT ĐỘNG (HOW IT WORKS):
-  * Theo dõi (Follow): Xem bài viết công khai/bài viết cho người theo dõi của đối phương trên bảng tin.
-  * Kết bạn (Friendship): Gửi yêu cầu kết bạn. Bên nhận có quyền Chấp nhận hoặc Từ chối. Khi đồng ý kết bạn, hệ thống tự động gán quan hệ theo dõi hai chiều (mutual follow) lẫn nhau.
-
-✦ NƠI HOẠT ĐỘNG (WHERE IT WORKS):
-  * Controller: web/Controllers/HomeController.cs
-    - Gửi yêu cầu: `AddFriend` (Dòng 1021-1079)
-    - Chấp nhận: `AcceptFriend` (Dòng 1081-1131)
-    - Hủy kết bạn: `RemoveFriend` (Dòng 1161-1195)
-  * Giao diện: web/Views/Home/Friends.cshtml, Profile.cshtml
-  * CSDL (Tables): Friendship, Follow
-
-✦ TẠI SAO HOẠT ĐỘNG (WHY IT WORKS):
-  * Khi `AcceptFriend` được thực hiện, trạng thái kết bạn chuyển sang `FriendshipStatus.Accepted`.
-  * Đồng thời, hệ thống thêm 2 bản ghi vào bảng `Follow` (A follow B và B follow A) nếu chưa tồn tại, giúp bài đăng của cả 2 xuất hiện trên bảng tin của nhau.
+- MÃ YÊU CẦU: FR09 (Kết bạn), AC05 (Nghiệm thu nhắn tin & bạn bè)
+- CÁCH HOẠT ĐỘNG (How it works):
+  * Theo dõi người dùng khác để cập nhật bài viết của họ trên bảng tin của mình.
+  * Gửi lời mời kết bạn. Người nhận có thể Đồng ý hoặc Từ chối. Khi đồng ý kết bạn, hệ thống tự động thiết lập trạng thái theo dõi chéo lẫn nhau (mutual follow).
+- NƠI HOẠT ĐỘNG (Where it works):
+  * Controller xử lý: web/Controllers/HomeController.cs
+    - Theo dõi: ToggleFollow (Dòng 507-545)
+    - Gửi kết bạn: AddFriend (Dòng 1021-1079)
+    - Đồng ý kết bạn: AcceptFriend (Dòng 1081-1131)
+    - Từ chối kết bạn: DeclineFriend (Dòng 1133-1159)
+    - Hủy kết bạn: RemoveFriend (Dòng 1161-1195)
+  * Giao diện (Views): web/Views/Home/Friends.cshtml, web/Views/Home/Profile.cshtml (Các nút hành động)
+  * Bảng Cơ sở dữ liệu: Friendship, Follow
+- TẠI SAO HOẠT ĐỘNG (Why it works):
+  * AcceptFriend cập nhật trạng thái Status = FriendshipStatus.Accepted trong bảng Friendship, đồng thời tự động chèn 2 bản ghi vào bảng Follow đại diện cho mối quan hệ 2 chiều, giúp bảng tin hiển thị bài viết của cả hai.
 
 ================================================================================
-MODULE 8: TRANG CÁ NHÂN & THIẾT LẬP THÔNG TIN (PROFILE & SETTINGS)
+[MODULE 08] TRANG CÁ NHÂN & THIẾT LẬP (PROFILE & USER SETTINGS)
 ================================================================================
-✦ ÁNH XẠ MÃ YÊU CẦU:
-  - Yêu cầu chức năng (FR): FR03 (Quản lý hồ sơ), FR11 (Tìm kiếm người dùng)
-  - Quy định nghiệp vụ (BR): BR04 (Người dùng có thể chặn tài khoản khác)
-  - Yêu cầu phi chức năng (NFR): NFR07 (Giao diện Responsive trên mobile)
-
-✦ CÁCH HOẠT ĐỘNG (HOW IT WORKS):
-  * Xem thông tin trang cá nhân, ảnh đại diện, ảnh bìa, danh sách bài đăng của người dùng.
-  * Chỉnh sửa thông tin cá nhân (Họ tên, Tiểu sử Bio) và tải lên thay đổi ảnh đại diện/ảnh bìa.
-  * Nếu người dùng A chặn người dùng B, B truy cập trang cá nhân của A sẽ bị trả về trang lỗi 404 (NotFound). Admin/Moderator được miễn trừ quy tắc này để kiểm tra nội dung.
-
-✦ NƠI HOẠT ĐỘNG (WHERE IT WORKS):
-  * Controller: web/Controllers/HomeController.cs
-    - Xem Profile: `Profile` (Dòng 548-627)
-    - Cài đặt: `Settings` (Dòng 829-878)
-  * Giao diện: web/Views/Home/Profile.cshtml, Settings.cshtml
-  * CSDL (Tables): AspNetUser, BlockedUser
-
-✦ TẠI SAO HOẠT ĐỘNG (WHY IT WORKS):
-  * Áp dụng thuộc tính CSS `word-break: break-word` và `flex-wrap: wrap` trên layout thông tin Profile để tránh lỗi tràn chữ khi người dùng nhập Bio quá dài (đáp ứng NFR07).
-  * Trong Action `Profile`, Controller thực hiện kiểm tra chặn trước khi tải trang:
-    ```csharp
-    bool isBlockedByTarget = _db.BlockedUsers.Any(b => b.BlockerId == id && b.BlockedUserId == currentUserId);
-    if (isBlockedByTarget && !User.IsInRole("Admin") && !User.IsInRole("Moderator"))
-    {
-        return NotFound();
-    }
-    ```
-    Quy tắc này giúp bảo vệ quyền riêng tư người dùng theo quy định BR04, đồng thời giữ quyền hạn của Ban quản trị.
+- MÃ YÊU CẦU: FR03 (Quản lý hồ sơ), BR04 (Người dùng có thể chặn tài khoản khác)
+- CÁCH HOẠT ĐỘNG (How it works):
+  * Xem trang cá nhân của mình hoặc người khác.
+  * Giao diện tự động ngắt dòng văn bản dài (tiểu sử Bio/tên dài) tránh vỡ cấu trúc CSS.
+  * Chặn hiển thị: Nếu User A chặn User B, khi B cố truy cập trang cá nhân của A sẽ nhận lỗi 404 NotFound. Ngoại lệ: Admin và Moderator vẫn xem được trang để phục vụ công tác kiểm duyệt.
+- NƠI HOẠT ĐỘNG (Where it works):
+  * Controller xử lý: web/Controllers/HomeController.cs (Action Profile, Dòng 548-627)
+  * Giao diện (Views): web/Views/Home/Profile.cshtml
+  * CSS định dạng: web/wwwroot/css/site.css hoặc styles nhúng ở Profile (`word-break: break-word; flex-wrap: wrap;`)
+  * Bảng Cơ sở dữ liệu: AspNetUser, BlockedUser
+- TẠI SAO HOẠT ĐỘNG (Why it works):
+  * CSS sử dụng word-break: break-word; white-space: normal; giúp chữ tự xuống dòng.
+  * Action Profile kiểm tra CSDL:
+    `bool isBlockedByTarget = _db.BlockedUsers.Any(b => b.BlockerId == id && b.BlockedUserId == currentUserId);`
+    Nếu trả về true và người truy cập không có vai trò Admin/Moderator, Action sẽ lập tức trả về NotFound() (HTTP 404).
 
 ================================================================================
-MODULE 9: NHẮN TIN TRỰC TIẾP THỜI GIAN THỰC (REAL-TIME DIRECT MESSAGING)
+[MODULE 09] NHẮN TIN TRỰC TIẾP THỜI GIAN THỰC (REAL-TIME CHAT & DMs)
 ================================================================================
-✦ ÁNH XẠ MÃ YÊU CẦU:
-  - Yêu cầu chức năng (FR): FR08 (Nhắn tin), FR11 (Tìm kiếm người dùng)
-  - Use Case (UC): UC03 (Nhắn tin)
-  - Tiêu chí nghiệm thu (AC): AC05 (Nhắn tin hoạt động đúng)
-  - Quy định nghiệp vụ (BR): BR04 (Người dùng có thể chặn tài khoản khác - phần Chat)
-
-✦ CÁCH HOẠT ĐỘNG (HOW IT WORKS):
-  * Người dùng tìm kiếm bạn bè và mở khung chat để nhắn tin trực tiếp.
-  * Hỗ trợ nhắn tin văn bản, đính kèm tệp tin hình ảnh, video, tài liệu truyền tải tức thì.
-  * Hiển thị trạng thái tin nhắn đã đọc/chưa đọc, hiển thị chỉ báo đối phương đang gõ chữ (Typing Indicator) và Badge đếm số tin nhắn chưa đọc trên thanh menu.
-
-✦ NƠI HOẠT ĐỘNG (WHERE IT WORKS):
-  * Controller: web/Controllers/ChatController.cs
-    - Lấy tin nhắn: `GetMessages` (Dòng 169-209)
-    - Tải file chat: `UploadChatMedia` (Dòng 257-285)
-  * SignalR Hub: web/Hubs/NexusHub.cs (Hàm `SendDirectMessage` dòng 67-149)
-  * Giao diện & JS: web/Views/Chat/Index.cshtml, web/wwwroot/js/chat.js
-  * CSDL (Tables): Conversation, ChatMessage
-
-✦ TẠI SAO HOẠT ĐỘNG (WHY IT WORKS):
-  * SignalR thiết lập kết nối WebSocket liên tục. Khi người dùng kết nối, Hub tự động đưa kết nối vào một Group riêng biệt mang tên `UserId` của họ.
-  * Hàm `SendDirectMessage` kiểm tra chặn trong bảng `BlockedUser`: nếu tồn tại quan hệ chặn giữa hai bên, hệ thống sẽ dừng xử lý và không lưu tin nhắn (đáp ứng BR04).
-  * Hub chuẩn hóa cuộc trò chuyện duy nhất bằng cách sắp xếp thứ tự bảng chữ cái của 2 ID người dùng. Tin nhắn lưu vào bảng `ChatMessage`, sau đó được phát tới nhóm kết nối của người nhận thông qua:
-    `Clients.Group(recipientId).SendAsync("ReceiveDirectMessage", payload)`.
-
-================================================================================
-MODULE 10: THÔNG BÁO THỜI GIAN THỰC (REAL-TIME NOTIFICATIONS)
-================================================================================
-✦ ÁNH XẠ MÃ YÊU CẦU:
-  - Yêu cầu chức năng (FR): FR10 (Thông báo)
-  - Tiêu chí nghiệm thu (AC): AC08 (Hoạt động ổn định)
-
-✦ CÁCH HOẠT ĐỘNG (HOW IT WORKS):
-  * Người dùng nhận được thông báo thời gian thực ngay lập tức khi có người thích bài viết, bình luận, kết bạn, hoặc khi bài đăng bị Admin/Moderator xóa do vi phạm chính sách cộng đồng.
-  * Số lượng thông báo chưa đọc được cập nhật tăng dần trên biểu tượng quả chuông của thanh điều hướng mà không cần tải lại trang.
-
-✦ NƠI HOẠT ĐỘNG (WHERE IT WORKS):
-  * Controller: web/Controllers/HomeController.cs
-    - Danh sách thông báo: `Notifications` (Dòng 880-910)
-    - Đánh dấu đã đọc: `MarkNotificationsRead` (Dòng 912-923)
+- MÃ YÊU CẦU: FR08 (Nhắn tin), UC03 (Use Case Nhắn tin), AC05 (Nghiệm thu Nhắn tin)
+- CÁCH HOẠT ĐỘNG (How it works):
+  * Người dùng mở hộp thoại chat trực tiếp với bạn bè. Tin nhắn gửi đi xuất hiện tức thời trên màn hình bên nhận. Hỗ trợ đính kèm ảnh, video, tài liệu trong khung chat.
+  * Hiển thị trạng thái tin nhắn (đã đọc/chưa đọc) và hiển thị chỉ báo đối phương đang gõ tin nhắn (Typing Indicator). Cập nhật số tin nhắn chưa đọc lên thanh điều hướng.
+- NƠI HOẠT ĐỘNG (Where it works):
+  * Controller xử lý: web/Controllers/ChatController.cs
+    - Trang chat: Index (Dòng 24-167)
+    - Tải tin nhắn: GetMessages (Dòng 169-209)
   * SignalR Hub: web/Hubs/NexusHub.cs
-  * Giao diện: web/Views/Home/Notifications.cshtml, web/Views/Shared/_Layout.cshtml (Mã JS lắng nghe thông báo)
-  * CSDL (Tables): Notification
-
-✦ TẠI SAO HOẠT ĐỘNG (WHY IT WORKS):
-  * Khi các hành động xảy ra trong Controller, một thực thể `Notification` mới được lưu vào CSDL.
-  * Sau đó, Controller sử dụng `IHubContext<NexusHub>` để phát tín hiệu qua SignalR tới Group của người nhận:
-    `_hubContext.Clients.Group(targetUserId).SendAsync("ReceiveNotification", new { count = unreadCount, message = content })`.
-  * JavaScript ở Client nhận sự kiện, tiến hành cập nhật số đếm trên Badge quả chuông và hiển thị thông báo Toast góc màn hình.
-
-================================================================================
-MODULE 11: BÁO CÁO VI PHẠM (REPORTING)
-================================================================================
-✦ ÁNH XẠ MÃ YÊU CẦU:
-  - Yêu cầu chức năng (FR): FR12 (Báo cáo vi phạm)
-  - Use Case (UC): UC04 (Kiểm duyệt - Gửi báo cáo)
-
-✦ CÁCH HOẠT ĐỘNG (HOW IT WORKS):
-  * Người dùng có thể nhấp chọn báo cáo một bài viết hoặc người dùng khác vi phạm kèm theo lý do cụ thể.
-  * Báo cáo sau khi gửi sẽ được chuyển vào hàng đợi kiểm duyệt để chờ Moderator hoặc Admin xử lý.
-
-✦ NƠI HOẠT ĐỘNG (WHERE IT WORKS):
-  * Controller: web/Controllers/HomeController.cs
-    - Gửi báo cáo: `ReportPost` (Dòng 1322-1352)
-  * Giao diện: web/Views/Home/_PostList.cshtml (Nút báo cáo bài viết/Form nhập lý do)
-  * CSDL (Tables): Report
-
-✦ TẠI SAO HOẠT ĐỘNG (WHY IT WORKS):
-  * Khi nhấn báo cáo, hệ thống kiểm tra xem người dùng đã báo cáo bài đăng này chưa để tránh gửi lặp lại:
-    `var existing = await _db.Reports.AnyAsync(r => r.ReporterId == currentUserId && r.TargetPostId == postId && r.Status == "Pending");`
-  * Nếu chưa, lưu bản ghi mới vào bảng `Report` với trạng thái `Status = "Pending"`.
+    - Gửi tin nhắn: SendDirectMessage (Dòng 67-149)
+    - Báo đã đọc: MarkConversationRead (Dòng 154-176)
+    - Chỉ báo gõ: SendTypingIndicator (Dòng 181-194)
+  * Giao diện & Script: web/Views/Chat/Index.cshtml, web/wwwroot/js/chat.js (hoặc mã script kết nối SignalR tích hợp)
+  * Bảng Cơ sở dữ liệu: Conversation, ChatMessage
+- TẠI SAO HOẠT ĐỘNG (Why it works):
+  * SignalR thiết lập kết nối WebSocket liên tục. Trên server, phương thức OnConnectedAsync đưa kết nối client vào một nhóm (Group) có tên trùng với UserId của họ.
+  * Khi gửi tin nhắn, Hub lưu vào bảng ChatMessage, sau đó gọi phương thức client ReceiveDirectMessage gửi tới Group của người nhận và người gửi để đồng bộ.
+  * ID hội thoại được tạo theo thứ tự từ điển của 2 ID người dùng để đảm bảo duy nhất.
 
 ================================================================================
-MODULE 12: KIỂM DUYỆT NỘI DUNG (CONTENT MODERATION)
+[MODULE 10] THÔNG BÁO THỜI GIAN THỰC (REAL-TIME NOTIFICATIONS)
 ================================================================================
-✦ ÁNH XẠ MÃ YÊU CẦU:
-  - Yêu cầu chức năng (FR): FR13 (Kiểm duyệt nội dung)
-  - Use Case (UC): UC04 (Kiểm duyệt - Xử lý báo cáo)
-  - Quy định nghiệp vụ (BR): BR03 (Không đăng nội dung vi phạm), BR07 (Nội dung vi phạm sẽ bị xóa)
-
-✦ CÁCH HOẠT ĐỘNG (HOW IT WORKS):
-  * Người kiểm duyệt (Moderator) và Admin có trang Hàng đợi kiểm duyệt (/Moderation/Queue) để xem danh sách báo cáo.
-  * Cho phép bấm "Bác bỏ báo cáo" (Dismiss) nếu báo cáo không đúng, hoặc bấm "Xóa bài viết" (Delete) nếu bài viết vi phạm chính sách.
-  * Khi xóa bài, hệ thống tự động gửi thông báo cảnh cáo kèm lý do cho tác giả bài viết đó.
-
-✦ NƠI HOẠT ĐỘNG (WHERE IT WORKS):
-  * Controller: web/Controllers/ModerationController.cs
-    - Danh sách hàng đợi: `Queue` (Dòng 24-61)
-    - Xử lý báo cáo: `Process` (Dòng 65-103)
-  * Views: web/Views/Moderation/Queue.cshtml
-  * CSDL (Tables): Report, Notification, Post
-
-✦ TẠI SAO HOẠT ĐỘNG (WHY IT WORKS):
-  * Các Action kiểm duyệt được bảo mật bằng bộ lọc phân quyền `[Authorize(Roles = "Admin,Moderator")]`.
-  * Để xóa bài viết an toàn mà không bị lỗi NullReferenceException, hệ thống thực thi theo quy trình chuẩn:
-    1. Đầu tiên, lấy và giữ ID tác giả của bài viết: `string postOwnerId = post.UserId;`.
-    2. Tạo mới và lưu bản ghi cảnh báo `Notification` cho tác giả: `_db.Notifications.Add(...)`.
-    3. Tiến hành xóa bài viết khỏi DBSet: `_db.Posts.Remove(post)`.
-    4. Gọi `_db.SaveChangesAsync()`.
-    Việc làm này đảm bảo ID tác giả không bị giải phóng khỏi EF Tracker trước khi tạo thông báo cảnh cáo.
+- MÃ YÊU CẦU: FR10 (Thông báo)
+- CÁCH HOẠT ĐỘNG (How it works):
+  * Nhận thông báo lập tức khi có người thích, bình luận bài viết, gửi lời mời kết bạn, đồng ý kết bạn, theo dõi, hoặc khi bài viết bị ban quản trị xóa.
+  * Badge (số đếm quả chuông) tự tăng lên động mà không cần reload trang.
+- NƠI HOẠT ĐỘNG (Where it works):
+  * Controller xử lý: web/Controllers/HomeController.cs (Action Notifications (Dòng 880-910), MarkNotificationsRead (Dòng 912-923))
+  * SignalR Hub: web/Hubs/NexusHub.cs
+  * Giao diện: web/Views/Home/Notifications.cshtml, JavaScript lắng nghe tại web/Views/Shared/_Layout.cshtml
+  * Bảng Cơ sở dữ liệu: Notification
+- TẠI SAO HOẠT ĐỘNG (Why it works):
+  * Khi có hành động phát sinh, các Controller lưu dữ liệu vào bảng Notification, sau đó gọi:
+    `_hubContext.Clients.Group(userId).SendAsync("ReceiveNotification", data)`
+  * JS ở layout đăng ký sự kiện connection.on("ReceiveNotification", ...) để tăng số lượng badge và hiện hộp thông báo nổi (Toast).
 
 ================================================================================
-MODULE 13: BẢNG ĐIỀU KHIỂN ADMIN & THÀNH VIÊN (ADMIN DASHBOARD & USERS)
+[MODULE 11] BÁO CÁO VI PHẠM & HÀNG ĐỢI KIỂM DUYỆT (REPORT & MODERATION)
 ================================================================================
-✦ ÁNH XẠ MÃ YÊU CẦU:
-  - Yêu cầu chức năng (FR): FR14 (Quản lý người dùng), FR15 (Thống kê hệ thống), FR16 (Phân quyền)
-  - Tiêu chí nghiệm thu (AC): AC06 (Hệ thống phân quyền đúng)
-  - Quy định nghiệp vụ (BR): BR06 (Quản trị viên có toàn quyền)
-
-✦ CÁCH HOẠT ĐỘNG (HOW IT WORKS):
-  * Admin xem số liệu thống kê toàn trang (Tổng số user, bài đăng, bình luận, tin nhắn, lượt đăng ký mới trong ngày).
-  * Admin tìm kiếm thành viên, thay đổi vai trò giữa Admin, Moderator, User.
-  * Admin khóa tài khoản người dùng vi phạm (bắt buộc nhập lý do cụ thể) hoặc mở khóa tài khoản. Tài khoản bị khóa sẽ không đăng nhập được.
-
-✦ NƠI HOẠT ĐỘNG (WHERE IT WORKS):
-  * Controller: web/Controllers/AdminController.cs
-    - Tổng quan stats: `Dashboard` (Dòng 29-86)
-    - Danh sách User: `Users` (Dòng 88-143)
-    - Khóa/Mở khóa: `BlockUser` (Dòng 145-159) & `UnblockUser` (Dòng 161-175)
-    - Đổi Role: `ChangeRole` (Dòng 177-197)
-  * Views: web/Views/Admin/Dashboard.cshtml, Users.cshtml
-  * CSDL (Tables): AspNetUser, AspNetRole, AspNetUserRole
-
-✦ TẠI SAO HOẠT ĐỘNG (WHY IT WORKS):
-  * Bộ lọc `[Authorize(Roles = "Admin")]` ngăn chặn mọi truy cập trái phép từ User thường hoặc Khách vãng lai (BR06).
-  * Thống kê được tổng hợp nhanh bằng cách sử dụng các hàm gom cụm hiệu năng cao của LINQ (`CountAsync()`).
-  * Khi khóa người dùng, Admin cập nhật các trường `IsBlocked = true`, `BlockedAt` và `BlockedReason` trên thực thể `ApplicationUser`. Khi đăng nhập tại `AccountController.LoginPost()`, hệ thống kiểm tra cờ này để từ chối phiên đăng nhập và thông báo lý do khóa cho người dùng.
+- MÃ YÊU CẦU: FR12 (Báo cáo vi phạm), FR13 (Kiểm duyệt nội dung), UC04 (Use Case Kiểm duyệt), BR03 & BR07 (Nội dung vi phạm bị xóa & cảnh cáo)
+- CÁCH HOẠT ĐỘNG (How it works):
+  * Người dùng báo cáo bài viết vi phạm chính sách kèm lý do.
+  * Người kiểm duyệt (Moderator) và Admin theo dõi hàng đợi báo cáo (/Moderation/Queue).
+  * Có quyền Bác bỏ báo cáo (Dismiss) hoặc Xóa bài viết (Delete). Khi xóa bài viết, hệ thống tự động gửi thông báo cảnh cáo an toàn tới tác giả bài viết đó.
+- NƠI HOẠT ĐỘNG (Where it works):
+  * Controller xử lý: web/Controllers/ModerationController.cs
+    - Hàng đợi: Queue (Dòng 24-61)
+    - Xử lý: Process (Dòng 65-103)
+  * Admin Controller xử lý: web/Controllers/AdminController.cs (Action ResolveReport, Dòng 226-263)
+  * Giao diện (Views): web/Views/Moderation/Queue.cshtml, web/Views/Admin/Reports.cshtml
+  * Bảng Cơ sở dữ liệu: Report, Notification, Post
+- TẠI SAO HOẠT ĐỘNG (Why it works):
+  * Các Controller được bảo vệ bằng phân quyền [Authorize(Roles = "Admin,Moderator")].
+  * Để tránh lỗi NullReferenceException khi xóa bài viết, logic code tuân thủ thứ tự chính xác:
+    1. Lưu lại ID tác giả bài viết từ Post trước khi ngắt kết nối: `string postOwnerId = post.UserId;`
+    2. Tạo mới và lưu bản ghi cảnh cáo Notification cho tác giả đó.
+    3. Thực hiện xóa Post khỏi db: `_db.Posts.Remove(post);`
+    4. Lưu thay đổi: `await _db.SaveChangesAsync();`
+    Cơ chế này đảm bảo EF Change Tracker không giải phóng mối liên kết ngoại trước khi thực hiện lưu thông báo phạt.
 
 ================================================================================
-MODULE 14: SAO LƯU DỮ LIỆU HỆ THỐNG (DATA BACKUP)
+[MODULE 12] BẢNG QUẢN TRỊ ADMIN & QUẢN LÝ THÀNH VIÊN (ADMIN DASHBOARD)
 ================================================================================
-✦ ÁNH XẠ MÃ YÊU CẦU:
-  - Yêu cầu chức năng (FR): FR17 (Sao lưu dữ liệu)
-  - Tiêu chí nghiệm thu (AC): AC07 (Backup dữ liệu thành công)
-  - Yêu cầu phi chức năng (NFR): NFR06 (Sao lưu dữ liệu mỗi ngày)
+- MÃ YÊU CẦU: FR14 (Quản lý người dùng), FR15 (Thống kê hệ thống), FR16 (Phân quyền), BR06 (Admin có toàn quyền)
+- CÁCH HOẠT ĐỘNG (How it works):
+  * Admin truy cập trang Dashboard xem các thống kê toàn diện (tổng số user, bài viết, bình luận, chat, lượng đăng ký mới trong ngày).
+  * Tìm kiếm người dùng, đổi vai trò thành viên (User -> Moderator -> Admin).
+  * Khóa tài khoản (Block) người dùng bắt buộc nhập lý do hoặc Mở khóa tài khoản (Unblock). Tài khoản bị khóa sẽ lập tức bị chặn không cho đăng nhập.
+- NƠI HOẠT ĐỘNG (Where it works):
+  * Controller xử lý: web/Controllers/AdminController.cs
+    - Dashboard thống kê: Dashboard (Dòng 29-86)
+    - Quản lý user: Users (Dòng 88-143)
+    - Khóa/Mở khóa: BlockUser (Dòng 145-159) & UnblockUser (Dòng 161-175)
+    - Đổi vai trò: ChangeRole (Dòng 177-197)
+  * Chặn đăng nhập: web/Controllers/AccountController.cs (Hàm LoginPost, Dòng 54-58)
+  * Giao diện (Views): web/Views/Admin/Dashboard.cshtml, web/Views/Admin/Users.cshtml
+  * Bảng Cơ sở dữ liệu: AspNetUser, AspNetRole, AspNetUserRole
+- TẠI SAO HOẠT ĐỘNG (Why it works):
+  * Bộ lọc `[Authorize(Roles = "Admin")]` ngăn chặn truy cập trái phép.
+  * Khi khóa, hệ thống cập nhật `IsBlocked = true` và `BlockedReason = reason`. Tại AccountController.LoginPost, khi xác thực thành công, hệ thống kiểm tra nếu `user.IsBlocked == true` thì từ chối cấp session cookie và hiển thị lý do khóa lên màn hình đăng nhập.
 
-✦ CÁCH HOẠT ĐỘNG (HOW IT WORKS):
-  * Admin quản lý danh sách các tệp sao lưu (.bak) tại giao diện quản trị chuyên biệt (/Admin/Backup).
-  * Cho phép Admin nhấp chuột "Tạo bản sao lưu mới" để tạo tệp backup CSDL tức thời.
-  * Admin có thể tải bản sao lưu về máy cá nhân (Download) hoặc xóa bản sao lưu (Delete) khỏi hệ thống.
+================================================================================
+[MODULE 13] SAO LƯU DỮ LIỆU HỆ THỐNG (DATA BACKUP ENGINE)
+================================================================================
+- MÃ YÊU CẦU: FR17 (Sao lưu dữ liệu), NFR06 (Backup dữ liệu mỗi ngày), AC07 (Backup dữ liệu thành công)
+- CÁCH HOẠT ĐỘNG (How it works):
+  * Cung cấp giao diện quản trị sao lưu dữ liệu (/Admin/Backup) cho phép Admin tạo bản sao lưu (.bak) trực tuyến bất kỳ lúc nào.
+  * Hiển thị danh sách các bản sao lưu đã tạo kèm theo dung lượng file (tính bằng KB/MB) và ngày giờ tạo tệp.
+  * Cho phép tải trực tiếp file sao lưu về máy cá nhân (Download) hoặc xóa file sao lưu khỏi máy chủ.
+- NƠI HOẠT ĐỘNG (Where it works):
+  * Controller xử lý: web/Controllers/AdminController.cs
+    - Xem danh sách và trang backup: Backup (Dòng 286-312)
+    - Tạo backup: CreateBackup (Dòng 314-345)
+    - Tải xuống: DownloadBackup (Dòng 347-367)
+    - Xóa: DeleteBackup (Dòng 369-395)
+  * Giao diện (Views): web/Views/Admin/Backup.cshtml
+  * Liên kết sidebar: web/Views/Shared/_AdminLayout.cshtml (Dòng 623)
+  * Thư mục lưu trữ tệp vật lý: web/Databases/Backups/
+- TẠI SAO HOẠT ĐỘNG (Why it works):
+  * Thực hiện sao lưu bất đồng bộ bằng lệnh SQL gốc (T-SQL BACKUP DATABASE) qua EF Core:
+    `await _db.Database.ExecuteSqlRawAsync("BACKUP DATABASE [WebSocialMediaDB] TO DISK = {0} WITH FORMAT, INIT", backupPath);`
+    Lệnh này chạy online, tạo ra file `.bak` chuẩn mà không khóa cơ sở dữ liệu hay làm gián đoạn ứng dụng (không downtime).
+  * Tên tệp tải xuống được kiểm soát để ngăn chặn tấn công Directory Traversal (chỉ cho phép tệp đuôi `.bak` hợp lệ).
 
-✦ NƠI HOẠT ĐỘNG (WHERE IT WORKS):
-  * Controller: web/Controllers/AdminController.cs
-    - Trang sao lưu: `Backup` (Dòng 286-312)
-    - Tạo backup: `CreateBackup` (Dòng 314-345)
-    - Tải tệp: `DownloadBackup` (Dòng 347-367)
-    - Xóa tệp: `DeleteBackup` (Dòng 369-395)
-  * Views: web/Views/Admin/Backup.cshtml, web/Views/Shared/_AdminLayout.cshtml
-  * Thư mục tệp vật lý: web/Databases/Backups/
-
-✦ TẠI SAO HOẠT ĐỘNG (WHY IT WORKS):
-  * Tạo tệp sao lưu CSDL hoàn toàn trực tuyến và bất đồng bộ bằng cách chạy lệnh SQL gốc (T-SQL BACKUP DATABASE) qua Entity Framework Core DbContext:
-    `_db.Database.ExecuteSqlRawAsync("BACKUP DATABASE [WebSocialMediaDB] TO DISK = {0} WITH FORMAT, INIT", backupPath);`
-  * Câu lệnh này chỉ thị cho SQL Server tạo bản sao lưu vật lý sang file `.bak` mà không khóa hay làm gián đoạn bất kỳ kết nối CSDL nào khác (không gây downtime cho ứng dụng).
-  * Controller kiểm tra độ an toàn của tên tệp tải về để ngăn ngừa tấn công Directory Traversal (chỉ cho phép tệp đuôi `.bak` hợp lệ).
-  * Thư mục lưu trữ `Backups/` được phân tích động từ `DataDirectory` do SQL Server LocalDB chạy dưới tài khoản Windows người dùng hiện tại nên có toàn quyền ghi file.
+================================================================================
+[MODULE 14] KHỞI TẠO CƠ SỞ DỮ LIỆU & ÁNH XẠ (DATABASE & EF CORE MAPPING)
+================================================================================
+- CÁCH HOẠT ĐỘNG (How it works):
+  * Cơ sở dữ liệu ứng dụng được lưu trực tiếp trong thư mục dự án tại web/Databases/WebSocialMediaDB.mdf và WebSocialMediaDB_log.ldf.
+  * Ánh xạ toàn bộ 23 bảng CSDL mặc định của Identity và tự tạo sang dạng tên tiếng Anh số ít (Singular Table Names).
+- NƠI HOẠT ĐỘNG (Where it works):
+  * Cấu hình chuỗi kết nối: web/appsettings.json
+  * Cấu hình thư mục chứa MDF động: web/Program.cs (Dòng 10-12)
+  * Lớp ánh xạ Fluent API: web/Data/ApplicationDbContext.cs (Phương thức OnModelCreating)
+- TẠI SAO HOẠT ĐỘNG (Why it works):
+  * Trong Program.cs, mã C# giải quyết chuỗi `|DataDirectory|` thành đường dẫn vật lý tuyệt đối trước khi nạp DbContext:
+    `AppDomain.CurrentDomain.SetData("DataDirectory", Path.Combine(builder.Environment.ContentRootPath, "Databases"));`
+    Cơ chế này ngăn ngừa lỗi lệch đường dẫn giữa thiết kế migrations (Design-time) và chạy ứng dụng thực tế (Runtime).
+  * Trong ApplicationDbContext.cs, gọi ánh xạ Fluent API `.ToTable("Post")` ép EF Core tự sinh SQL với tên số ít, trong khi giữ nguyên thuộc tính C# số nhiều `DbSet<Post> Posts` để tránh lỗi biên dịch mã nguồn hiện tại.
 ================================================================================
