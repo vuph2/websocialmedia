@@ -99,7 +99,7 @@
                     }
                     else
                     {
-                        <img src="@url" class="post-image" onclick="window.open('@url','_blank')" alt=""/>
+                        <img src="@url" class="post-image" onclick="openLightbox('@url')" style="cursor:zoom-in;" alt=""/>
                     }
                 </div>
             }
@@ -121,7 +121,7 @@
                             }
                             else
                             {
-                                <img src="@url" class="post-gallery-img" onclick="window.open('@url','_blank')" alt=""/>
+                                <img src="@url" class="post-gallery-img" onclick="openLightbox('@url')" style="cursor:zoom-in;" alt=""/>
                             }
                         </div>
                     }
@@ -243,7 +243,7 @@
             <button class="action-btn" onclick="toggleComments(@post.Id)">
                 <i class="bi bi-chat-text"></i> Comment
             </button>
-            <button class="action-btn" onclick="sharePost(@post.Id)"><i class="bi bi-share"></i> Share</button>
+            <button class="action-btn" onclick="sharePost('@post.AuthorId', @post.Id)"><i class="bi bi-share"></i> Share</button>
         </div>
 
         <div class="comment-section" id="comments-@post.Id" style="display:none;">
@@ -300,3 +300,43 @@
         </div>
     </div>
 </div>
+
+<!-- Lightbox Modal -->
+<div id="nexusLightbox" onclick="closeLightbox()" style="
+    display:none; position:fixed; inset:0; z-index:9999;
+    background:rgba(0,0,0,0.92); backdrop-filter:blur(8px);
+    align-items:center; justify-content:center; cursor:zoom-out;
+    animation: fadeInLightbox 0.2s ease;">
+    <button onclick="closeLightbox()" style="
+        position:absolute; top:1.2rem; right:1.5rem;
+        background:rgba(255,255,255,0.1); border:none; color:#fff;
+        font-size:1.8rem; width:44px; height:44px; border-radius:50%;
+        cursor:pointer; display:flex; align-items:center; justify-content:center;
+        transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'"
+        onmouseout="this.style.background='rgba(255,255,255,0.1)'">&times;</button>
+    <img id="nexusLightboxImg" src="" onclick="event.stopPropagation()" style="
+        max-width:92vw; max-height:92vh; object-fit:contain;
+        border-radius:12px; box-shadow:0 8px 48px rgba(0,0,0,0.6);
+        cursor:default;" alt="Preview"/>
+</div>
+
+<style>
+@@keyframes fadeInLightbox { from { opacity:0; } to { opacity:1; } }
+</style>
+
+<script>
+    function openLightbox(url) {
+        var lb = document.getElementById('nexusLightbox');
+        document.getElementById('nexusLightboxImg').src = url;
+        lb.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+    function closeLightbox() {
+        document.getElementById('nexusLightbox').style.display = 'none';
+        document.getElementById('nexusLightboxImg').src = '';
+        document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeLightbox();
+    });
+</script>

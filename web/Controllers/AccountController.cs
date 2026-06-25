@@ -249,7 +249,19 @@ namespace web.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Unauthorized();
 
-            var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
+            var hasPassword = await _userManager.HasPasswordAsync(user);
+
+            IdentityResult result;
+            if (!hasPassword)
+            {
+                // Tài khoản đăng nhập bằng Google chưa có mật khẩu — dùng AddPasswordAsync
+                result = await _userManager.AddPasswordAsync(user, model.NewPassword);
+            }
+            else
+            {
+                result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
+            }
+
             if (result.Succeeded)
             {
                 await _signInManager.RefreshSignInAsync(user);
