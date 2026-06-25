@@ -564,8 +564,8 @@
             if (followingEl && data.followingCount !== undefined) followingEl.textContent = data.followingCount;
         }
 
-        function sharePost(postId) {
-            const url = window.location.origin + '/Home/Profile/' + postId; 
+        function sharePost(authorId, postId) {
+            const url = window.location.origin + '/Home/Profile/' + authorId + '#post-' + postId; 
             navigator.clipboard.writeText(url).then(() => {
                 showToast('Link copied to clipboard!', 'bi-link-45deg');
             });

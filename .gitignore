@@ -13,3 +13,5 @@
 .DS_Store
 web/dotnet-install.ps1
 web/wwwroot/uploads/
+*.mdf  
+*.ldf  

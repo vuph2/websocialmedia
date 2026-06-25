@@ -222,6 +222,7 @@ namespace web.Models
 
         public string? ProfilePictureUrl { get; set; }
         public IFormFile? ProfilePictureFile { get; set; }
+        public bool HasPassword { get; set; } = true;
     }
 
     public class NotificationViewModel
@@ -236,9 +237,8 @@ namespace web.Models
 
     public class ChangePasswordViewModel
     {
-        [Required]
         [DataType(DataType.Password)]
-        public string CurrentPassword { get; set; } = string.Empty;
+        public string? CurrentPassword { get; set; }
 
         [Required]
         [StringLength(100, ErrorMessage = "The {0} must be at least {2} characters long.", MinimumLength = 6)]

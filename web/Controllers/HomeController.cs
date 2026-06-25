@@ -567,6 +567,7 @@ namespace web.Controllers
                 .Include(p => p.Likes)
                 .Include(p => p.Comments)
                 .Include(p => p.Media)
+                .Include(p => p.PollOptions).ThenInclude(o => o.Votes)
                 .Where(u => u.UserId == id)
                 .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
@@ -599,20 +600,39 @@ namespace web.Controllers
                 PostCount         = posts.Count,
                 FriendshipStatus  = friendshipStatus,
                 FriendshipId      = friendshipId,
-                Posts             = posts.Select(p => new PostFeedViewModel
-                {
-                    Id            = p.Id,
-                    Content       = p.Content,
-                    ImageUrl      = p.ImageUrl,
-                    PostType      = p.PostType,
-                    CreatedAt     = p.CreatedAt,
-                    AuthorName    = $"{user.FirstName} {user.LastName}".Trim(),
-                    AuthorAvatar  = user.ProfilePictureUrl,
-                    ImageUrls     = p.Media.Select(m => m.ImageUrl).ToList(),
-                    LikeCount     = p.Likes.Count,
-                    CommentCount  = p.Comments.Count,
-                    IsLikedByCurrentUser = p.Likes.Any(l => l.UserId == currentUserId),
-                    IsOwnPost     = p.UserId == currentUserId
+                Posts             = posts.Select(p => {
+                    var totalVotes = p.PollOptions.Sum(o => o.Votes.Count);
+                    var userLike = p.Likes.FirstOrDefault(l => l.UserId == currentUserId);
+                    return new PostFeedViewModel
+                    {
+                        Id            = p.Id,
+                        Content       = p.Content,
+                        ImageUrl      = p.ImageUrl,
+                        PostType      = p.PostType,
+                        Feeling       = p.Feeling,
+                        CreatedAt     = p.CreatedAt,
+                        UpdatedAt     = p.UpdatedAt,
+                        AuthorId      = p.UserId,
+                        AuthorName    = $"{user.FirstName} {user.LastName}".Trim(),
+                        AuthorUsername = user.UserName ?? user.Email ?? "user",
+                        AuthorAvatar  = user.ProfilePictureUrl,
+                        ImageUrls     = p.Media.Select(m => m.ImageUrl).ToList(),
+                        LikeCount     = p.Likes.Count,
+                        CommentCount  = p.Comments.Count,
+                        IsLikedByCurrentUser = userLike != null,
+                        CurrentUserReaction  = userLike?.ReactionType,
+                        IsOwnPost     = p.UserId == currentUserId,
+                        IsFollowedByAuthor = false,
+                        HasVoted      = p.PollOptions.Any(o => o.Votes.Any(v => v.UserId == currentUserId)),
+                        PollOptions   = p.PollOptions.Select(o => new PollOptionViewModel
+                        {
+                            Id         = o.Id,
+                            OptionText = o.OptionText,
+                            VoteCount  = o.Votes.Count,
+                            VotedByCurrentUser = o.Votes.Any(v => v.UserId == currentUserId),
+                            Percentage = totalVotes == 0 ? 0 : Math.Round((double)o.Votes.Count / totalVotes * 100, 1)
+                        }).ToList()
+                    };
                 }).ToList()
             };
 
@@ -831,12 +851,15 @@ namespace web.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return NotFound();
 
+            var hasPassword = await _userManager.HasPasswordAsync(user);
+
             var vm = new SettingsViewModel
             {
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Bio = user.Bio,
-                ProfilePictureUrl = user.ProfilePictureUrl
+                ProfilePictureUrl = user.ProfilePictureUrl,
+                HasPassword = hasPassword
             };
             return View(vm);
         }
