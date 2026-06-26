@@ -38,6 +38,11 @@ namespace web.Helpers
                 {
                     embeds.Add($"<div style=\"margin-top:0.8rem;\"><video src=\"{rawUrl}\" controls style=\"max-width:100%; max-height:400px; display:block; border-radius:12px;\"></video></div>");
                 }
+                // 2.5. Raw Audio File Check (.mp3, .wav, .ogg)
+                else if (lowerUrl.EndsWith(".mp3") || lowerUrl.EndsWith(".wav") || lowerUrl.EndsWith(".ogg"))
+                {
+                    embeds.Add($"<div style=\"margin-top:0.8rem;\"><audio src=\"{rawUrl}\" controls style=\"width:100%; max-width:400px; display:block;\"></audio></div>");
+                }
                 // 3. YouTube Embed Check
                 else if (Regex.IsMatch(rawUrl, @"(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^""&?\/\s]{11})", RegexOptions.IgnoreCase))
                 {

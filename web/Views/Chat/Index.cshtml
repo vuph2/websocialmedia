@@ -564,6 +564,10 @@
                                 {
                                     <div style="margin-bottom:5px;"><video src="@msg.MediaUrl" controls style="max-width:100%; border-radius:10px;"></video></div>
                                 }
+                                else if (msg.MediaType == "audio")
+                                {
+                                    <div style="margin-bottom:5px;"><audio src="@msg.MediaUrl" controls style="max-width:100%;"></audio></div>
+                                }
                                 else
                                 {
                                     <div style="margin-bottom:5px;"><a href="@msg.MediaUrl" target="_blank" style="color:#fff; text-decoration:underline;"><i class="bi bi-file-earmark"></i> Download File</a></div>
@@ -610,6 +614,7 @@
                 <div id="chatUploadPreview" style="display:none; margin-top:10px; position:relative; width:fit-content;">
                     <img id="chatPreviewImg" style="max-width:100px; border-radius:10px; border:1px solid var(--border);" />
                     <video id="chatPreviewVid" style="max-width:100px; display:none; border-radius:10px; border:1px solid var(--border);"></video>
+                    <audio id="chatPreviewAud" style="max-width:200px; display:none; border-radius:10px; border:1px solid var(--border);" controls></audio>
                     <div id="chatPreviewFile" style="display:none; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:10px; color:#fff; font-size:0.8rem;">
                         <i class="bi bi-file-earmark"></i> <span id="chatPreviewFileName"></span>
                     </div>
@@ -720,15 +725,19 @@
         const wrap = document.getElementById('chatUploadPreview');
         const img = document.getElementById('chatPreviewImg');
         const vid = document.getElementById('chatPreviewVid');
+        const aud = document.getElementById('chatPreviewAud');
         const fileDiv = document.getElementById('chatPreviewFile');
         
         wrap.style.display = 'block';
         img.style.display = type === 'image' ? 'block' : 'none';
         vid.style.display = type === 'video' ? 'block' : 'none';
+        aud.style.display = type === 'audio' ? 'block' : 'none';
         fileDiv.style.display = type === 'file' ? 'block' : 'none';
 
         if(type==='image') img.src = url;
-        if(type==='video') vid.src = url;
+        else if(type==='video') vid.src = url;
+        else if(type==='audio') aud.src = url;
+        
         if(type==='file') document.getElementById('chatPreviewFileName').innerText = name;
     }
 
@@ -763,7 +772,7 @@
     connection.on('ReceiveDirectMessage', (data) => {
         if (!activeConversationId && data.conversationId) {
             // Redirect to conversation if we're on the chat page with no active convo
-            window.location.href = `/Chat?conversationId=${data.conversationId}`;
+            window.location.href = `/Chat/Index?conversationId=${data.conversationId}`;
             return;
         }
 
@@ -803,6 +812,8 @@
                 mediaHtml = `<div style="margin-bottom:5px;"><img src="${data.mediaUrl}" style="max-width:100%; border-radius:10px; cursor:pointer;" onclick="window.open('${data.mediaUrl}','_blank')" /></div>`;
             } else if (data.mediaType === 'video') {
                 mediaHtml = `<div style="margin-bottom:5px;"><video src="${data.mediaUrl}" controls style="max-width:100%; border-radius:10px;"></video></div>`;
+            } else if (data.mediaType === 'audio') {
+                mediaHtml = `<div style="margin-bottom:5px;"><audio src="${data.mediaUrl}" controls style="max-width:100%;"></audio></div>`;
             } else {
                 mediaHtml = `<div style="margin-bottom:5px;"><a href="${data.mediaUrl}" target="_blank" style="color:#fff; text-decoration:underline;"><i class="bi bi-file-earmark"></i> Download File</a></div>`;
             }
@@ -902,7 +913,7 @@
                     searchResults.innerHTML = '<div style="padding:1rem;color:var(--text-muted);font-size:0.85rem;text-align:center;">No users found</div>';
                 } else {
                     searchResults.innerHTML = users.map(u => `
-                        <a href="/Chat?userId=${u.id}" class="search-user-item">
+                        <a href="/Chat/Index?userId=${u.id}" class="search-user-item">
                             ${u.avatar
                                 ? `<img src="${u.avatar}" class="user-avatar" alt="" />`
                                 : `<div class="user-initial">${u.name[0]}</div>`

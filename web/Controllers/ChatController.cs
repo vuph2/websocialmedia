@@ -272,6 +272,7 @@ namespace web.Controllers
             var type = "file";
             if (file.ContentType.StartsWith("image/")) type = "image";
             else if (file.ContentType.StartsWith("video/")) type = "video";
+            else if (file.ContentType.StartsWith("audio/")) type = "audio";
 
             return Json(new { success = true, url = $"/uploads/chat/{fileName}", type });
         }
